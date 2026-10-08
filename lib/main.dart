@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'reset_password_otp_page.dart';
+import 'views/auth/lupa_password_page2.dart';
 
 void main() {
   runApp(const MyApp());
@@ -10,9 +10,14 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
+    return MaterialApp(
+      title: 'CampusReport',
       debugShowCheckedModeBanner: false,
-      home: ResetPasswordOtpPage(emailOrPhone: "user@example.com"),
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF003399)),
+        useMaterial3: true,
+      ),
+      home: const LupaPasswordPage2(),
     );
   }
 }

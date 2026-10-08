@@ -1,5 +1,5 @@
-name: campus_report
-description: "Aplikasi CampusReport"
+name: campusreport
+description: "Proyek Flutter CampusReport"
 publish_to: 'none'
 
 version: 1.0.0+1
@@ -10,9 +10,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-
-  # Icon bawaan iOS/Cupertino (opsional)
-  cupertino_icons: ^1.0.8
+  cupertino_icons: ^1.0.6
 
 dev_dependencies:
   flutter_test:
