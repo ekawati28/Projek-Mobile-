@@ -1,0 +1,8 @@
+# Flutter / Dart temp files
+.dart_tool/
+.idea/
+.vscode/
+build/
+.packages
+.flutter-plugins
+.flutter-plugins-dependencies
