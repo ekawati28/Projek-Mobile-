@@ -1,16 +1,23 @@
 import 'package:flutter/material.dart';
+import 'views/auth/login_page.dart';
 
 void main() {
-  runApp(const MainApp());
+  runApp(const CampusReportApp());
 }
 
-class MainApp extends StatelessWidget {
-  const MainApp({super.key});
+class CampusReportApp extends StatelessWidget {
+  const CampusReportApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
-      home: Scaffold(body: Center(child: Text('Hello World!'))),
+    return MaterialApp(
+      title: 'CampusReport',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+        useMaterial3: true,
+      ),
+      home:  LoginPage(),
     );
   }
 }
