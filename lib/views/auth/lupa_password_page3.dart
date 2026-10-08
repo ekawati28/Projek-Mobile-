@@ -97,10 +97,7 @@ class _LupaPasswordPage3State extends State<LupaPasswordPage3> {
 
                           const Spacer(),
 
-                          // =================================================
-                          // LOGO CAMPUSREPORT
-                          // =================================================
-
+                          // Logo CampusReport
                           Row(
                             children: [
                               Container(
@@ -110,21 +107,10 @@ class _LupaPasswordPage3State extends State<LupaPasswordPage3> {
                                   color: const Color(0xFF2463FF),
                                   borderRadius: BorderRadius.circular(7),
                                 ),
-                                child: Stack(
-                                  alignment: Alignment.center,
-                                  children: [
-                                    const Icon(
-                                      Icons.shield_outlined,
-                                      color: Colors.white,
-                                      size: 19,
-                                    ),
-                                    const Icon(
-                                      Icons.check,
-                                      color: Colors.white,
-                                      size: 10,
-                                      weight: 700,
-                                    ),
-                                  ],
+                                child: const Icon(
+                                  Icons.shield_outlined,
+                                  color: Colors.white,
+                                  size: 17,
                                 ),
                               ),
                               const SizedBox(width: 7),
