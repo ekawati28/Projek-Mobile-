@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'views/auth/login_page.dart';
+import 'views/splash_page.dart';
 
 void main() {
   runApp(const CampusReportApp());
@@ -11,13 +11,20 @@ class CampusReportApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'CampusReport',
       debugShowCheckedModeBanner: false,
+
+      title: 'CampusReport',
+
       theme: ThemeData(
-        primarySwatch: Colors.blue,
         useMaterial3: true,
+        fontFamily: 'Arial',
+
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF2563EB),
+        ),
       ),
-      home:  LoginPage(),
+
+      home: const SplashPage(),
     );
   }
 }
