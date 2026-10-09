@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'lupa_password_page3.dart';
 
 class LupaPasswordPage2 extends StatelessWidget {
   const LupaPasswordPage2({super.key});
@@ -97,7 +98,14 @@ class LupaPasswordPage2 extends StatelessWidget {
                   width: double.infinity,
                   height: 48,
                   child: ElevatedButton(
-                    onPressed: () {},
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const LupaPasswordPage3(),
+                          ),
+                      );
+                    },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF0040B0),
                       shape: RoundedRectangleBorder(

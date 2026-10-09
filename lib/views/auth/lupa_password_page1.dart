@@ -1,9 +1,11 @@
 import 'dart:ui';
+import 'lupa_password_page2.dart';
 
 import 'package:flutter/material.dart';
 
 class ForgotPasswordDialog extends StatefulWidget {
   const ForgotPasswordDialog({super.key});
+  
 
   @override
   State<ForgotPasswordDialog> createState() =>
@@ -36,15 +38,21 @@ class _ForgotPasswordDialogState
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text(
-          'Link reset password berhasil dikirim',
-        ),
-      ),
+    Navigator.pop(context);
+
+    showDialog(
+      context: context,
+      barrierColor: Colors.black54,
+      builder: (context) {
+        return const Dialog(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          child: LupaPasswordPage2(),
+        );
+
+      },
     );
 
-    Navigator.pop(context);
   }
 
   @override
