@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'register_page.dart';
+import 'lupa_password_page1.dart';
+import 'lupa_password_page2.dart';
+import 'lupa_password_page3.dart';
+
 
 class LoginPage extends StatefulWidget {
   LoginPage({super.key});
@@ -56,14 +60,20 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   void forgotPassword() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text(
-          'Halaman Lupa Password',
-        ),
-      ),
-    );
-  }
+    showForgotPasswordDialog(context);
+    showDialog(
+    context: context,
+    barrierColor: Colors.black54,
+    builder: (context) {
+      return const Dialog(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        child: ForgotPasswordDialog(),
+      );
+    },
+  );
+}
+   
 
   void register() {
     Navigator.push(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'login_page.dart';
 
 class LupaPasswordPage3 extends StatefulWidget {
   const LupaPasswordPage3({
@@ -41,6 +42,14 @@ class _LupaPasswordPage3State extends State<LupaPasswordPage3> {
         behavior: SnackBarBehavior.floating,
       ),
     );
+
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(
+        builder: (context) => LoginPage(),
+      ),
+      (route) => false,
+    );
   }
 
   @override
@@ -72,7 +81,14 @@ class _LupaPasswordPage3State extends State<LupaPasswordPage3> {
                           InkWell(
                             borderRadius: BorderRadius.circular(20),
                             onTap: () {
-                              Navigator.pop(context);
+                              Navigator.pushAndRemoveUntil(
+                                context,
+                                MaterialPageRoute(
+                                  builder:  (context) => LoginPage(),
+                                ),
+                                (route) => false,
+                              );
+                             
                             },
                             child: Row(
                               children: [
