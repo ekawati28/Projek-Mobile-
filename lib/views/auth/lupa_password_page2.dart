@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'lupa_password_page3.dart';
+import 'login_page.dart';
 
 class LupaPasswordPage2 extends StatelessWidget {
   const LupaPasswordPage2({super.key});
@@ -7,8 +7,10 @@ class LupaPasswordPage2 extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black.withValues(alpha: 0.5),
-      body: Center(
+  backgroundColor: Colors.transparent,
+
+  body: 
+      Center(
         child: SingleChildScrollView(
           child: Container(
             margin: const EdgeInsets.symmetric(horizontal: 24),
@@ -43,14 +45,25 @@ class LupaPasswordPage2 extends StatelessWidget {
                       ],
                     ),
                     IconButton(
-                      icon: const Icon(Icons.close, color: Colors.grey, size: 20),
-                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(
+                        Icons.close,
+                        color: Colors.grey,
+                        size: 20,
+                      ),
+
+                      onPressed: () {
+
+                        Navigator.pop(context);
+
+                      },
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(),
                     ),
                   ],
                 ),
+                
                 const SizedBox(height: 16),
+                
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(14),
@@ -93,53 +106,17 @@ class LupaPasswordPage2 extends StatelessWidget {
                     height: 1.4,
                   ),
                 ),
+
                 const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  height: 48,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const LupaPasswordPage3(),
-                          ),
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0040B0),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(24),
-                      ),
-                      elevation: 0,
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: const [
-                        Text(
-                          'Reset Password',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        SizedBox(width: 6),
-                        Icon(
-                          Icons.arrow_forward,
-                          color: Colors.white,
-                          size: 18,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
+
                 Center(
                   child: TextButton(
-                    onPressed: () => Navigator.pop(context),
+                    onPressed: () {
+                      Navigator.pop(context);
+                    },
+
                     child: const Text(
-                      'Kembali ke Login',
+                      'Sebelumnya',
                       style: TextStyle(
                         color: Colors.black87,
                         fontSize: 13,
@@ -155,4 +132,5 @@ class LupaPasswordPage2 extends StatelessWidget {
       ),
     );
   }
+
 }

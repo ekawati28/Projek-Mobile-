@@ -1,6 +1,5 @@
-import 'dart:ui';
 import 'lupa_password_page2.dart';
-
+import '../../controllers/auth_controller.dart';
 import 'package:flutter/material.dart';
 
 class ForgotPasswordDialog extends StatefulWidget {
@@ -12,12 +11,12 @@ class ForgotPasswordDialog extends StatefulWidget {
       _ForgotPasswordDialogState();
 }
 
-class _ForgotPasswordDialogState
-    extends State<ForgotPasswordDialog> {
-  final TextEditingController emailController =
-      TextEditingController(
-    text: 'mahasiswa@gmail.com',
-  );
+class _ForgotPasswordDialogState extends State<ForgotPasswordDialog> {
+  final TextEditingController emailController = TextEditingController();
+  final AuthController authController = AuthController();
+
+  String? emailError;
+  bool isLoading = false;
 
   @override
   void dispose() {
@@ -25,33 +24,66 @@ class _ForgotPasswordDialogState
     super.dispose();
   }
 
-  
-  void kirimResetPassword() {
+  Future<void> kirimResetPassword() async {
     final email = emailController.text.trim();
+    setState(() {
+      emailError = null;
+    });
 
-    if (email.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Email harus diisi'),
-        ),
-      );
+    if(email.isEmpty){
+      setState(() {
+        emailError =
+            "Email wajib diisi";
+      });
       return;
     }
 
-    Navigator.pop(context);
+    if(!RegExp( r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)){
+      setState(() {
+        emailError =
+            "Format email tidak valid";
+      });
+      return;
+    }
 
-    showDialog(
-      context: context,
-      barrierColor: Colors.black54,
-      builder: (context) {
-        return const Dialog(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          child: LupaPasswordPage2(),
-        );
+    setState(() {
+      isLoading = true;
+    });
 
-      },
-    );
+    try {
+      await authController.resetPassword(
+        email,
+      );
+
+      setState(() {
+        isLoading = false;
+      });
+
+      if(!mounted) return;
+
+      Navigator.of(context, rootNavigator: true).pop();
+
+      showDialog(
+        context: context,
+        barrierColor: Colors.black.withOpacity(0.30),
+        builder: (_) {
+
+          return const Dialog(
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            child: LupaPasswordPage2(),
+          );
+
+        },
+      );
+
+    } catch(e){
+      setState(() {
+        isLoading = false;
+          emailError =
+              "Terjadi kesalahan, coba lagi";
+      });
+    }
 
   }
 
@@ -59,18 +91,6 @@ class _ForgotPasswordDialogState
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        Positioned.fill(
-          child: BackdropFilter(
-            filter: ImageFilter.blur(
-              sigmaX: 5,
-              sigmaY: 5,
-            ),
-            child: Container(
-              color: Colors.black.withOpacity(0.30),
-            ),
-          ),
-        ),
-
         Center(
           child: Material(
             color: Colors.transparent,
@@ -124,8 +144,9 @@ class _ForgotPasswordDialogState
                       ),
 
                       GestureDetector(
-                        onTap: () =>
-                            Navigator.pop(context),
+                        onTap: () {
+                            Navigator.of(context).pop();
+                        },
                         child: const Icon(
                           Icons.close,
                           size: 19,
@@ -165,45 +186,71 @@ class _ForgotPasswordDialogState
                     controller: emailController,
                     keyboardType:
                         TextInputType.emailAddress,
+
+                    onChanged: (value) {
+                      if (emailError != null) {
+                        setState(() {
+                          emailError = null;
+                        });
+                      }
+                    },
+
                     decoration: InputDecoration(
-                      prefixIcon: const Icon(
-                        Icons.email_outlined,
+                      hintText: 'Masukkan email Anda',
+                      hintStyle: const TextStyle(
+                        color: Color(0xFF94A3B8),
+                        fontSize: 14,
+                      ),
+
+                      prefixIcon: const Icon(Icons.email_outlined,
                         size: 19,
                         color: Color(0xFF8CA1BF),
                       ),
+
                       filled: true,
-                      fillColor:
-                          const Color(0xFFF8FAFC),
-                      contentPadding:
-                          const EdgeInsets.symmetric(
+                      fillColor:const Color(0xFFF8FAFC),
+                      contentPadding: const EdgeInsets.symmetric(
                         vertical: 13,
                         horizontal: 12,
                       ),
+
                       border: OutlineInputBorder(
-                        borderRadius:
-                            BorderRadius.circular(12),
-                        borderSide:
-                            const BorderSide(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(
                           color: Color(0xFFDCE4EF),
                         ),
                       ),
-                      enabledBorder:
-                          OutlineInputBorder(
-                        borderRadius:
-                            BorderRadius.circular(12),
-                        borderSide:
-                            const BorderSide(
-                          color: Color(0xFFDCE4EF),
+
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: emailError != null
+                          ? Colors.red
+                          : const Color(0xFFDCE4EF),
                         ),
                       ),
-                      focusedBorder:
-                          OutlineInputBorder(
-                        borderRadius:
-                            BorderRadius.circular(12),
-                        borderSide:
-                            const BorderSide(
+                      
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(
                           color: Color(0xFF1769FF),
                         ),
+                      ),
+                    ),
+                  ),
+
+                  if(emailError != null)
+                  Padding(
+                    padding:
+                        const EdgeInsets.only(
+                          left: 12,
+                          top: 5,
+                        ),
+                    child: Text(
+                      emailError!,
+                      style: const TextStyle(
+                        color: Colors.red,
+                        fontSize: 14,
                       ),
                     ),
                   ),
@@ -216,22 +263,18 @@ class _ForgotPasswordDialogState
                         child: SizedBox(
                           height: 43,
                           child: ElevatedButton(
-                            onPressed: () {
+                            onPressed: isLoading ? null : () {
                               Navigator.pop(context);
                             },
-                            style:
-                                ElevatedButton.styleFrom(
-                              backgroundColor:
-                                  const Color(0xFFF1F5F9),
-                              foregroundColor:
-                                  const Color(0xFF334155),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFFF1F5F9),
+                              foregroundColor: const Color(0xFF334155),
                               elevation: 0,
-                              shape:
-                                  RoundedRectangleBorder(
-                                borderRadius:
-                                    BorderRadius.circular(12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
                               ),
                             ),
+                            
                             child: const Text(
                               'Batal',
                               style: TextStyle(
@@ -249,32 +292,33 @@ class _ForgotPasswordDialogState
                         child: SizedBox(
                           height: 43,
                           child: ElevatedButton(
-                            onPressed:
-                                kirimResetPassword,
-                            style:
-                                ElevatedButton.styleFrom(
-                              backgroundColor:
-                                  const Color(0xFF1769FF),
-                              foregroundColor:
-                                  Colors.white,
+                            onPressed: isLoading ? null : kirimResetPassword,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF1769FF),
+                              foregroundColor: Colors.white,
                               elevation: 4,
-                              shadowColor:
-                                  const Color(0x551769FF),
-                              shape:
-                                  RoundedRectangleBorder(
-                                borderRadius:
-                                    BorderRadius.circular(12),
+                              shadowColor: const Color(0x551769FF),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
                               ),
                             ),
-                            child: const Text(
-                              'Kirim Link Reset\nPassword',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight:
-                                    FontWeight.bold,
+                            child: isLoading ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+
+                            : const Text(
+                                'Kirim Link Reset\nPassword',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
-                            ),
                           ),
                         ),
                       ),
@@ -289,11 +333,13 @@ class _ForgotPasswordDialogState
     );
   }
 }
+
 void showForgotPasswordDialog(BuildContext context) {
   showDialog(
     context: context,
-    barrierColor: Colors.black54,
-    builder: (context) {
+    barrierColor: Colors.black.withOpacity(0.30),
+    
+    builder: (_) {
       return const Dialog(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -301,4 +347,5 @@ void showForgotPasswordDialog(BuildContext context) {
       );
     },
   );
+  
 }

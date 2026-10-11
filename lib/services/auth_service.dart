@@ -53,14 +53,12 @@ class AuthService {
     return supabase.auth.currentUser;
   }
 
-  Future<void> resetPassword(
-      String email
-  ) async {
-
-    await supabase.auth
-        .resetPasswordForEmail(
+  Future<void> resetPassword(String email) async {
+    await supabase.auth.resetPasswordForEmail(
       email,
+      redirectTo:
+          'http://localhost:3000',
     );
-
   }
+
 }

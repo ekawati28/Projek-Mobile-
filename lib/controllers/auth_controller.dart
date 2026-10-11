@@ -36,12 +36,8 @@ class AuthController {
     await authService.logout();
   }
 
-  Future<void> resetPassword(
-      String email
-  ) async {
-
+  Future<void> resetPassword(String email) async {
     await authService.resetPassword(email);
-
   }
 
   User? get currentUser {

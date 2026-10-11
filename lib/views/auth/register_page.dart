@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../controllers/auth_controller.dart';
+import '../../widgets/custom_dialog.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -13,8 +15,16 @@ class _RegisterPageState extends State<RegisterPage> {
   final TextEditingController passwordController = TextEditingController();
   final TextEditingController konfirmasiController = TextEditingController();
 
+  final AuthController authController = AuthController();
+
+  String? namaError;
+  String? emailError;
+  String? passwordError;
+  String? konfirmasiError;
+
   bool isPasswordHidden = true;
   bool isKonfirmasiHidden = true;
+  bool isLoading = false;
 
   @override
   void dispose() {
@@ -60,121 +70,229 @@ class _RegisterPageState extends State<RegisterPage> {
     bool password = false,
     bool isHidden = true,
     VoidCallback? onVisibilityPressed,
+    String? errorText,
   }) {
-    return Container(
-      height: 58,
-      margin: const EdgeInsets.only(bottom: 22),
-      child: TextField(
-        controller: controller,
-        obscureText: password && isHidden,
-        keyboardType: password
-            ? TextInputType.visiblePassword
-            : icon == Icons.email_outlined
-                ? TextInputType.emailAddress
-                : TextInputType.text,
-        decoration: InputDecoration(
-          hintText: hint,
-          hintStyle: const TextStyle(
-            color: Color(0xff91A3BE),
-            fontSize: 16,
-          ),
-          prefixIcon: Icon(
-            icon,
-            size: 23,
-            color: const Color(0xff91A3BE),
-          ),
-          suffixIcon: password
-              ? IconButton(
-                  onPressed: onVisibilityPressed,
-                  icon: Icon(
-                    isHidden
-                        ? Icons.visibility_outlined
-                        : Icons.visibility_off_outlined,
-                    size: 23,
-                    color: const Color(0xff91A3BE),
-                  ),
-                )
-              : null,
-          filled: true,
-          fillColor: const Color(0xffF8FAFD),
-          contentPadding: const EdgeInsets.symmetric(
-            vertical: 17,
-            horizontal: 16,
-          ),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(17),
-            borderSide: const BorderSide(
-              color: Color(0xffDCE5F2),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+        height: 58,
+        margin: const EdgeInsets.only(bottom: 5),
+        child: TextField(
+          controller: controller,
+          obscureText: password && isHidden,
+          keyboardType: password
+              ? TextInputType.visiblePassword
+              : icon == Icons.email_outlined
+                  ? TextInputType.emailAddress
+                  : TextInputType.text,
+
+          onChanged: (value) {
+
+            if (errorText != null) {
+              setState(() {
+
+                if (controller == namaController) {
+                  namaError = null;
+                }
+
+                if (controller == emailController) {
+                  emailError = null;
+                }
+
+                if (controller == passwordController) {
+                  passwordError = null;
+                }
+
+                if (controller == konfirmasiController) {
+                  konfirmasiError = null;
+                }
+              });
+            }
+          },
+
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: const TextStyle(
+              color: Color(0xff91A3BE),
+              fontSize: 16,
             ),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(17),
-            borderSide: const BorderSide(
-              color: Color(0xffDCE5F2),
+            prefixIcon: Icon(
+              icon,
+              size: 23,
+              color: const Color(0xff91A3BE),
             ),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(17),
-            borderSide: const BorderSide(
-              color: Color(0xff1E5EFF),
-              width: 1.5,
+            suffixIcon: password
+                ? IconButton(
+                    onPressed: onVisibilityPressed,
+                    icon: Icon(
+                      isHidden
+                          ? Icons.visibility_outlined
+                          : Icons.visibility_off_outlined,
+                      size: 23,
+                      color: const Color(0xff91A3BE),
+                    ),
+                  )
+                : null,
+            filled: true,
+            fillColor: const Color(0xffF8FAFD),
+            contentPadding: const EdgeInsets.symmetric(
+              vertical: 17,
+              horizontal: 16,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(17),
+              borderSide: BorderSide(
+              color: errorText != null
+                  ? Colors.red
+                  : const Color(0xffDCE5F2),
+              ),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(17),
+              borderSide: BorderSide(
+              color: errorText != null
+                  ? Colors.red
+                  : const Color(0xffDCE5F2),
+              ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(17),
+              borderSide: BorderSide(
+              color: errorText != null
+                  ? Colors.red
+                  : const Color(0xffDCE5F2),
+              ),
             ),
           ),
         ),
       ),
-    );
-  }
+      if (errorText != null)
+        Padding(
+          padding: const EdgeInsets.only(
+            left: 16,
+            bottom: 8,
+            top: 2,
+          ),
 
-  void daftar() {
+          child: Text(
+            errorText,
+
+            style: const TextStyle(
+              color: Colors.red,
+              fontSize: 14,
+              height: 1.2,
+            ),
+          ),
+        ),
+      ],
+      );
+    }
+
+  Future<void> daftar() async {
     String nama = namaController.text.trim();
     String email = emailController.text.trim();
     String password = passwordController.text;
     String konfirmasi = konfirmasiController.text;
 
-    if (nama.isEmpty ||
-        email.isEmpty ||
-        password.isEmpty ||
-        konfirmasi.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Semua kolom wajib diisi'),
-        ),
-      );
+    setState(() {
+      namaError = null;
+      emailError = null;
+      passwordError = null;
+      konfirmasiError = null;
+    });
+
+    bool isValid = true;
+
+    setState(() {
+    if (nama.isEmpty) {
+      namaError = "Nama wajib diisi";
+      isValid = false;
+    }
+
+    if (email.isEmpty) {
+      emailError = "Email wajib diisi";
+      isValid = false;
+    }
+
+    if (password.isEmpty) {
+      passwordError = "Password wajib diisi";
+      isValid = false;
+    }
+
+    if (konfirmasi.isEmpty) {
+      konfirmasiError =
+          "Konfirmasi password wajib diisi";
+      isValid = false;
+    }
+
+    });
+
+    if (!isValid) {
       return;
     }
 
-    if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Format email tidak valid'),
-        ),
-      );
+    if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$',
+    ).hasMatch(email)) {
+      setState(() {
+        emailError = "Format email tidak valid";
+      });
       return;
     }
 
     if (password.length < 6) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Password minimal 6 karakter'),
-        ),
-      );
+      setState(() {
+        passwordError =
+            "Password minimal 6 karakter";
+      });
       return;
     }
 
     if (password != konfirmasi) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Konfirmasi password tidak sama'),
-        ),
-      );
+      setState(() {
+        konfirmasiError =
+            "Password tidak sama";
+      });
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Validasi pendaftaran berhasil'),
-      ),
-    );
+    setState(() {
+      isLoading = true;
+    });
+
+    try {
+      final response = await authController.register(
+        nama: nama,
+        email: email,
+        password: password,
+      );
+
+
+      if (response.user != null) {
+
+        setState(() {
+          isLoading = false;
+        });
+
+        showSuccessDialog(
+          context,
+          'Pendaftaran berhasil',
+          onPressed: () {
+            Navigator.pop(context);
+          },
+        );
+      }
+
+    } catch (e) {
+      setState(() {
+        isLoading = false;
+      });
+
+      showErrorDialog(
+        context,
+        'Pendaftaran gagal',
+      );
+    }
 
     // Tambahkan proses penyimpanan akun ke backend di sini.
   }
@@ -296,15 +414,17 @@ class _RegisterPageState extends State<RegisterPage> {
                   "Masukkan nama lengkap Anda",
                   Icons.person_outline,
                   controller: namaController,
+                  errorText: namaError,
                 ),
 
                 // EMAIL
                 requiredLabel("Email"),
 
                 inputField(
-                  "budi@gmail.com",
+                  "contoh@gmail.com",
                   Icons.email_outlined,
                   controller: emailController,
+                  errorText: emailError,
                 ),
 
                 // PASSWORD
@@ -316,6 +436,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   controller: passwordController,
                   password: true,
                   isHidden: isPasswordHidden,
+                  errorText: passwordError,
                   onVisibilityPressed: () {
                     setState(() {
                       isPasswordHidden = !isPasswordHidden;
@@ -332,6 +453,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   controller: konfirmasiController,
                   password: true,
                   isHidden: isKonfirmasiHidden,
+                  errorText: konfirmasiError,
                   onVisibilityPressed: () {
                     setState(() {
                       isKonfirmasiHidden = !isKonfirmasiHidden;
@@ -355,7 +477,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     ],
                   ),
                   child: ElevatedButton(
-                    onPressed: daftar,
+                    onPressed: isLoading ? null : daftar,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xff1E5EFF),
                       foregroundColor: Colors.white,
@@ -364,22 +486,30 @@ class _RegisterPageState extends State<RegisterPage> {
                         borderRadius: BorderRadius.circular(18),
                       ),
                     ),
-                    child: const Row(
+
+                    child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Text(
-                          "Daftar",
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
+
+                        if (isLoading)
+                          const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+
+                        else
+                          const Text(
+                            "Daftar",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
-                        ),
-                        SizedBox(width: 10),
-                        Icon(
-                          Icons.arrow_forward,
-                          size: 22,
-                        ),
                       ],
                     ),
                   ),

@@ -3,6 +3,8 @@ import 'register_page.dart';
 import 'lupa_password_page1.dart';
 import 'lupa_password_page2.dart';
 import 'lupa_password_page3.dart';
+import '../../controllers/auth_controller.dart';
+import '../../widgets/custom_dialog.dart';
 
 
 class LoginPage extends StatefulWidget {
@@ -13,16 +15,17 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final TextEditingController emailController = TextEditingController(
-    text: 'mahasiswa@gmail.com',
-  );
-
-  final TextEditingController passwordController = TextEditingController(
-    text: '123456789',
-  );
+  final TextEditingController emailController = TextEditingController();
+  final TextEditingController passwordController = TextEditingController();
 
   // Untuk show / hide password
   bool isPasswordHidden = true;
+  bool isLoading = false;
+
+  final AuthController authController = AuthController();
+  
+  String? emailError;
+  String? passwordError;
 
   @override
   void dispose() {
@@ -32,31 +35,85 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
-  void login() {
-    String email = emailController.text.trim();
-    String password = passwordController.text;
+  Future<void> login() async {
+    String email =
+        emailController.text.trim();
 
-    // Validasi kosong
-    if (email.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Email dan password harus diisi',
-          ),
-        ),
-      );
+    String password =
+        passwordController.text;
 
+    bool isValid = true;
+
+    setState(() {
+      emailError = null;
+      passwordError = null;
+
+      if(email.isEmpty){
+        emailError =
+            "Email wajib diisi";
+        isValid = false;
+      }
+
+      if(password.isEmpty){
+        passwordError =
+            "Password wajib diisi";
+        isValid = false;
+      }
+    });
+
+    if(!isValid){
       return;
     }
 
-    // Login berhasil
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text(
+    setState(() {
+      isLoading = true;
+    });
+
+    try {
+      final response =
+          await authController.login(
+        email: email,
+        password: password,
+      );
+
+      if (response.user != null) {
+        setState(() {
+          isLoading = false;
+        });
+
+        showSuccessDialog(
+          context,
           'Login berhasil',
-        ),
-      ),
-    );
+        );
+
+        print(
+          'USER LOGIN: ${response.user!.email}',
+        );
+      }
+
+    } catch (e) {
+      setState(() {
+        isLoading = false;
+      });
+
+      String message = "Login gagal";
+      if (e.toString().contains(
+          "Invalid login credentials")) {
+        message =
+            "Email atau password tidak sesuai";
+      }
+
+      if (e.toString().contains(
+          "Email not confirmed")) {
+        message =
+            "Email belum dikonfirmasi";
+      }
+
+      showErrorDialog(
+        context,
+        message,
+      );
+    }
   }
 
   void forgotPassword() {
@@ -73,7 +130,7 @@ class _LoginPageState extends State<LoginPage> {
     },
   );
 }
-   
+  
 
   void register() {
     Navigator.push(
@@ -187,7 +244,9 @@ class _LoginPageState extends State<LoginPage> {
                     height: 1.7,
                   ),
                 ),
+
                 const SizedBox(height: 26),
+
                 const Text(
                   'Email',
                   style: TextStyle(
@@ -196,11 +255,24 @@ class _LoginPageState extends State<LoginPage> {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
+
                 const SizedBox(height: 8),
+                
                 TextField(
                   controller: emailController,
                   keyboardType: TextInputType.emailAddress,
+
+                  onChanged: (value) {
+                    if (emailError != null || passwordError != null) {
+                      setState(() {
+                        emailError = null;
+                        passwordError = null;
+                      });
+                    }
+                  },
+
                   decoration: InputDecoration(
+                    hintText: 'Masukkan email Anda',
                     prefixIcon: const Icon(
                       Icons.email_outlined,
                       color: Color(0xFF8CA1BF),
@@ -219,20 +291,45 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(17),
-                      borderSide: const BorderSide(
-                        color: Color(0xFFDCE4EF),
+                      borderSide: BorderSide(
+                        color: emailError != null
+                        ? Colors.red
+                        : const Color(0xFFDCE4EF),
                       ),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(17),
-                      borderSide: const BorderSide(
-                        color: Color(0xFF1769FF),
+                      borderSide: BorderSide(
+                        color: emailError != null
+                        ? Colors.red
+                        : const Color(0xFFDCE4EF),
                         width: 1.5,
                       ),
                     ),
                   ),
                 ),
+
+                if (emailError != null)
+
+                  Padding(
+                    padding:
+                        const EdgeInsets.only(
+                          left: 16,
+                          top: 5,
+                        ),
+
+                    child: Text(
+                      emailError!,
+
+                      style: const TextStyle(
+                        color: Colors.red,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+
                 const SizedBox(height: 22),
+
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -261,7 +358,18 @@ class _LoginPageState extends State<LoginPage> {
                 TextField(
                   controller: passwordController,
                   obscureText: isPasswordHidden,
+
+                  onChanged: (value) {
+                    if (passwordError != null || emailError != null) {
+                      setState(() {
+                        passwordError = null;
+                        emailError = null;
+                      });
+                    }
+                  },
+
                   decoration: InputDecoration(
+                    hintText: 'Masukkan kata sandi Anda',
                     prefixIcon: const Icon(
                       Icons.lock_outline,
                       color: Color(0xFF8CA1BF),
@@ -300,26 +408,49 @@ class _LoginPageState extends State<LoginPage> {
 
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(17),
-                      borderSide: const BorderSide(
-                        color: Color(0xFFDCE4EF),
+                      borderSide: BorderSide(
+                        color: passwordError != null
+                        ? Colors.red
+                        : const Color(0xFFDCE4EF),
                       ),
                     ),
 
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(17),
-                      borderSide: const BorderSide(
-                        color: Color(0xFF1769FF),
+                      borderSide: BorderSide(
+                        color: passwordError != null
+                        ? Colors.red
+                        : const Color(0xFFDCE4EF),
                         width: 1.5,
                       ),
                     ),
                   ),
                 ),
+
+                if (passwordError != null)
+                  Padding(
+                    padding:
+                        const EdgeInsets.only(
+                          left: 16,
+                          top: 5,
+                        ),
+
+                    child: Text(
+                      passwordError!,
+
+                      style: const TextStyle(
+                        color: Colors.red,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+
                 const SizedBox(height: 22),
                 Container(
                   width: double.infinity,
                   height: 58,
                   child: ElevatedButton(
-                    onPressed: login,
+                    onPressed: isLoading ? null : login,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF1769FF),
                       foregroundColor: Colors.white,
@@ -329,38 +460,52 @@ class _LoginPageState extends State<LoginPage> {
                         borderRadius: BorderRadius.circular(17),
                       ),
                     ),
-                    child: const Row(
+                    child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Text(
-                          'Login',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
+
+                        if (isLoading)
+
+                          const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+
+                        else
+                          const Text(
+                            'Login',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
-                        ),
-                        SizedBox(width: 10),
-                        Icon(
-                          Icons.arrow_forward,
-                          size: 22,
-                        ),
                       ],
                     ),
                   ),
                 ),
+
                 const SizedBox(height: 25),
+                
                 Center(
                   child: RichText(
                     text: TextSpan(
+                      style: const TextStyle(
+                        fontSize: 16,
+                        color: Color(0xFF64748B),
+                      ),
                       children: [
+
                         const TextSpan(
                           text: 'Belum punya akun? ',
-                          style: TextStyle(
-                            color: Color(0xFF64748B),
-                            fontSize: 16,
-                          ),
                         ),
+
                         WidgetSpan(
+                          alignment: PlaceholderAlignment.baseline,
+                          baseline: TextBaseline.alphabetic,
                           child: GestureDetector(
                             onTap: register,
                             child: const Text(
