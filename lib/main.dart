@@ -4,12 +4,12 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'config/supabese_config.dart';
 import 'views/splash_page.dart';
 import 'views/auth/lupa_password_page3.dart';
+import 'views/mahasiswa/dashboard_page.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 bool isPasswordRecovery = false;
 
 Future<void> main() async {
-
   WidgetsFlutterBinding.ensureInitialized();
 
   await Supabase.initialize(
@@ -19,7 +19,6 @@ Future<void> main() async {
 
   Supabase.instance.client.auth.onAuthStateChange.listen(
     (data) {
-
       print(
         "AUTH EVENT: ${data.event}",
       );
@@ -72,7 +71,7 @@ class CampusReportApp extends StatelessWidget {
           seedColor: const Color(0xFF2563EB),
         ),
       ),
-      home: const SplashPage(),
+      home: const DashboardPage(),
     );
   }
 }

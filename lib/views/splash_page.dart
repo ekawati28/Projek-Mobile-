@@ -13,12 +13,13 @@ class SplashPage extends StatefulWidget {
   State<SplashPage> createState() => _SplashPageState();
 }
 
-class _SplashPageState extends State<SplashPage> with SingleTickerProviderStateMixin {
+class _SplashPageState extends State<SplashPage>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
   Timer? _timer;
 
-  StreamSubscription<AuthState>? _authSubscription; 
+  StreamSubscription<AuthState>? _authSubscription;
 
   @override
   void initState() {
@@ -38,19 +39,15 @@ class _SplashPageState extends State<SplashPage> with SingleTickerProviderStateM
 
     _controller.forward();
 
-    _authSubscription =
-        Supabase.instance.client.auth.onAuthStateChange.listen(
+    _authSubscription = Supabase.instance.client.auth.onAuthStateChange.listen(
       (data) {
-        if (data.event ==
-            AuthChangeEvent.passwordRecovery) {
-
+        if (data.event == AuthChangeEvent.passwordRecovery) {
           _timer?.cancel();
 
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
-              builder: (_) =>
-                  const LupaPasswordPage3(),
+              builder: (_) => const LupaPasswordPage3(),
             ),
           );
         }
@@ -60,7 +57,6 @@ class _SplashPageState extends State<SplashPage> with SingleTickerProviderStateM
     _timer = Timer(
       const Duration(seconds: 3),
       () {
-
         if (!mounted) return;
 
         Navigator.pushReplacement(
@@ -99,16 +95,12 @@ class _SplashPageState extends State<SplashPage> with SingleTickerProviderStateM
                   borderRadius: BorderRadius.circular(25),
                   boxShadow: [
                     BoxShadow(
-                      color:
-                          const Color(0xFF2563EB)
-                              .withOpacity(0.25),
+                      color: const Color(0xFF2563EB).withOpacity(0.25),
                       blurRadius: 25,
-                      offset:
-                          const Offset(0, 10),
+                      offset: const Offset(0, 10),
                     ),
                   ],
                 ),
-
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
@@ -117,18 +109,15 @@ class _SplashPageState extends State<SplashPage> with SingleTickerProviderStateM
                       size: 65,
                       color: Colors.white,
                     ),
-
                     Positioned(
                       right: 10,
                       bottom: 10,
                       child: Container(
                         padding: const EdgeInsets.all(5),
-                        decoration:
-                            const BoxDecoration(
+                        decoration: const BoxDecoration(
                           color: Colors.green,
                           shape: BoxShape.circle,
                         ),
-
                         child: const Icon(
                           Icons.check,
                           size: 15,
@@ -139,9 +128,7 @@ class _SplashPageState extends State<SplashPage> with SingleTickerProviderStateM
                   ],
                 ),
               ),
-
               const SizedBox(height: 20),
-
               RichText(
                 text: const TextSpan(
                   children: [
@@ -150,27 +137,21 @@ class _SplashPageState extends State<SplashPage> with SingleTickerProviderStateM
                       style: TextStyle(
                         color: Colors.black,
                         fontSize: 30,
-                        fontWeight:
-                            FontWeight.bold,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-
                     TextSpan(
                       text: "Report",
                       style: TextStyle(
-                        color:
-                            Color(0xFF2563EB),
+                        color: Color(0xFF2563EB),
                         fontSize: 30,
-                        fontWeight:
-                            FontWeight.bold,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                   ],
                 ),
               ),
-
               const SizedBox(height: 10),
-
               const Text(
                 "SISTEM FASILITAS KAMPUS",
                 style: TextStyle(
@@ -180,21 +161,16 @@ class _SplashPageState extends State<SplashPage> with SingleTickerProviderStateM
                   fontWeight: FontWeight.w600,
                 ),
               ),
-
               const SizedBox(height: 30),
-
               const SizedBox(
                 width: 28,
                 height: 28,
-                child:
-                  CircularProgressIndicator(
+                child: CircularProgressIndicator(
                   strokeWidth: 2.5,
                   color: Color(0xFF2563EB),
                 ),
               ),
-
               const SizedBox(height: 12),
-
               const Text(
                 "Memuat sistem fasilitas...",
                 style: TextStyle(
