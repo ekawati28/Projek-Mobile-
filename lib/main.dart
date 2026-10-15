@@ -1,9 +1,12 @@
+import 'package:campusreport/views/mahasiswa/buat_laporan_page.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'config/supabese_config.dart';
 import 'views/splash_page.dart';
 import 'views/auth/lupa_password_page3.dart';
+import 'views/mahasiswa/buat_laporan_page.dart';
+
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 bool isPasswordRecovery = false;
@@ -72,7 +75,7 @@ class CampusReportApp extends StatelessWidget {
           seedColor: const Color(0xFF2563EB),
         ),
       ),
-      home: const SplashPage(),
+      home: const BuatLaporanScreen(),
     );
   }
 }
