@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'views/auth/lupa_password_page3.dart';
+import 'views/mahasiswa/notifikasi_mahasiswa.dart';
 
 void main() {
   runApp(const CampusReportApp());
@@ -20,9 +20,7 @@ class CampusReportApp extends StatelessWidget {
           seedColor: const Color(0xFF2563EB),
         ),
       ),
-      home: const LupaPasswordPage3(
-        email: 'mahasiswa@gmail.com',
-      ),
+      home: const NotifikasiMahasiswa(),
     );
   }
 }
