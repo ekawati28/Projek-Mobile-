@@ -5,6 +5,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'config/supabese_config.dart';
 import 'views/splash_page.dart';
 import 'views/auth/lupa_password_page3.dart';
+import 'views/mahasiswa/detail_laporan_page.dart';
+import 'views/mahasiswa/riwayat_laporan.dart';
 
 final GlobalKey<NavigatorState> navigatorKey =
     GlobalKey<NavigatorState>();
