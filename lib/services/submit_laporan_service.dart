@@ -9,6 +9,7 @@ class SubmitLaporanService {
   final FotoService fotoService = FotoService();
 
   Future<void> submit({
+    required String judul,
     required int idKategori,
     required String lokasi,
     required String deskripsi,
@@ -20,6 +21,7 @@ class SubmitLaporanService {
     // 1. Buat laporan dulu
     final idLaporan =
         await laporanService.buatLaporan(
+          judul: judul,
           idKategori: idKategori,
           lokasi: lokasi,
           deskripsi: deskripsi,

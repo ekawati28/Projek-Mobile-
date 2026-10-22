@@ -1,354 +1,441 @@
+import '../../services/dashboard_service.dart';
+import '../../models/dashboard_model.dart';
 import 'package:flutter/material.dart';
+import '../../widgets/bottom_navbar.dart';
+import 'buat_laporan_page.dart';
+import 'detail_laporan_page.dart';
 
-class DashboardPage extends StatelessWidget {
+class DashboardPage extends StatefulWidget {
   const DashboardPage({Key? key}) : super(key: key);
 
   @override
+  State<DashboardPage> createState() => _DashboardPageState();
+}
+
+class _DashboardPageState extends State<DashboardPage> {
+  final DashboardService dashboardService = DashboardService();
+
+  late Future<DashboardModel> dashboardFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    dashboardFuture = dashboardService.getDashboard();
+  }
+
+  String formatTanggal(DateTime tanggal) {
+    const bulan = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
+      'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'
+    ];
+
+    return '${tanggal.day} ${bulan[tanggal.month - 1]} ${tanggal.year}';
+  }
+
+  Future<void> handleBottomNavigation(int index) async {
+    switch (index) {
+      case 0:
+        break;
+
+      case 1:
+        // Halaman Riwayat, nanti dihubungkan.
+        break;
+
+      case 2:
+        final laporanBerhasil = await Navigator.push<bool>(
+          context,
+          MaterialPageRoute<bool>(
+            builder: (context) => const BuatLaporanScreen(),
+          ),
+        );
+
+        if (!mounted) return;
+
+        if (laporanBerhasil == true) {
+          setState(() {
+            dashboardFuture = dashboardService.getDashboard();
+          });
+        }
+        break;
+
+      case 3:
+        // Halaman Profil, nanti dihubungkan.
+        break;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return FutureBuilder<DashboardModel>(
+      future: dashboardFuture,
+      builder: (context, snapshot) {
+
+        if (snapshot.connectionState == ConnectionState.waiting &&
+    !snapshot.hasData) {
+          return const Scaffold(
+            body: Center(
+              child: CircularProgressIndicator(),
+            ),
+          );
+        }
+
+        if (snapshot.hasError) {
+          return Scaffold(
+            body: Center(
+              child: Text(
+                'Gagal memuat dashboard: ${snapshot.error}',
+              ),
+            ),
+          );
+        }
+
+        final data = snapshot.data!;
+
+        return Scaffold(
+          backgroundColor: Colors.white,
+          body: SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Column(
+                  // Header
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'UNIVERSITAS KHAIRUN',
-                        style: TextStyle(
-                          color: Color(0xFF1E56A0),
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: const [
-                          Text(
-                            'Halo, Mahasiswa',
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'UNIVERSITAS KHAIRUN',
                             style: TextStyle(
-                              fontSize: 22,
+                              color: Color(0xFF1E56A0),
+                              fontSize: 13,
                               fontWeight: FontWeight.bold,
-                              color: Colors.black,
+                              letterSpacing: 0.5,
                             ),
                           ),
-                          SizedBox(width: 6),
-                          Text('👋', style: TextStyle(fontSize: 20)),
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              Text(
+                                'Halo, ${data.namaPengguna}',
+                                style: const TextStyle(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              const Text(
+                                '👋',
+                                style: TextStyle(fontSize: 20),
+                              ),
+                              SizedBox(width: 6),
+                              Text('👋', style: TextStyle(fontSize: 20)),
+                            ],
+                          ),
+                        ],
+                      ),
+                      Stack(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: Colors.grey.shade300,
+                                width: 1,
+                              ),
+                            ),
+                            child: const Icon(
+                              Icons.notifications_outlined,
+                              color: Colors.black87,
+                              size: 22,
+                            ),
+                          ),
+                          Positioned(
+                            right: 2,
+                            top: 2,
+                            child: Container(
+                              padding: const EdgeInsets.all(5),
+                              decoration: const BoxDecoration(
+                                color: Color(0xFFEF4444),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Text(
+                                '2',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
                         ],
                       ),
                     ],
                   ),
-                  Stack(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: Colors.grey.shade300,
-                            width: 1,
+
+                  const SizedBox(height: 20),
+
+                  // Banner Biru
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(20.0),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1D5EF8),
+                      borderRadius: BorderRadius.circular(24.0),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF1D5EF8).withOpacity(0.3),
+                          blurRadius: 15,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Pusat Aspirasi Sarpras',
+                          style: TextStyle(
+                            color: Colors.white70,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
-                        child: const Icon(
-                          Icons.notifications_outlined,
-                          color: Colors.black87,
-                          size: 22,
-                        ),
-                      ),
-                      Positioned(
-                        right: 2,
-                        top: 2,
-                        child: Container(
-                          padding: const EdgeInsets.all(5),
-                          decoration: const BoxDecoration(
-                            color: Color(0xFFEF4444),
-                            shape: BoxShape.circle,
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Ada fasilitas kampus yang bermasalah?',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 19,
+                            fontWeight: FontWeight.bold,
+                            height: 1.2,
                           ),
-                          child: const Text(
-                            '2',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
+                        ),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Laporkan kerusakan AC, listrik, kursi, atau toilet agar segera ditangani tim sarpras.',
+                          style: TextStyle(
+                            color: Colors.white70,
+                            fontSize: 12,
+                            height: 1.4,
+                          ),
+                        ),
+                        const SizedBox(height: 18),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: () {},
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              foregroundColor: const Color(0xFF1D5EF8),
+                              elevation: 0,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(25),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: const [
+                                Icon(Icons.add, size: 22, color: Color(0xFF1D5EF8)),
+                                SizedBox(width: 4),
+                                Text(
+                                  '+ Buat Laporan',
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF1D5EF8),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // Header Status Laporan Saya
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: const [
+                      Text(
+                        'Status Laporan Saya',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      Text(
+                        'Lihat Detail',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF1D5EF8),
                         ),
                       ),
                     ],
                   ),
-                ],
-              ),
-              const SizedBox(height: 20),
+                  const SizedBox(height: 14),
 
-              // Banner Biru
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(20.0),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF1D5EF8),
-                  borderRadius: BorderRadius.circular(24.0),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF1D5EF8).withOpacity(0.3),
-                      blurRadius: 15,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Pusat Aspirasi Sarpras',
-                      style: TextStyle(
-                        color: Colors.white70,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Ada fasilitas kampus yang bermasalah?',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 19,
-                        fontWeight: FontWeight.bold,
-                        height: 1.2,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Laporkan kerusakan AC, listrik, kursi, atau toilet agar segera ditangani tim sarpras.',
-                      style: TextStyle(
-                        color: Colors.white70,
-                        fontSize: 12,
-                        height: 1.4,
-                      ),
-                    ),
-                    const SizedBox(height: 18),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: () {},
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: const Color(0xFF1D5EF8),
-                          elevation: 0,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(25),
-                          ),
+                  // Status Cards (2 1 1 2)
+                  Row(
+                    children: [
+                      Expanded(
+                        child: StatusCard(
+                          count: data.diajukan.toString(),
+                          label: 'Diajukan',
+                          bgColor: Color(0xFFFFFBEC),
+                          borderColor: Color(0xFFFFE082),
+                          textColor: Color(0xFFB45309),
                         ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: const [
-                            Icon(Icons.add, size: 22, color: Color(0xFF1D5EF8)),
-                            SizedBox(width: 4),
-                            Text(
-                              '+ Buat Laporan',
-                              style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF1D5EF8),
-                              ),
+                      ),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: StatusCard(
+                          count: data.diverifikasi.toString(),
+                          label: 'Diverifikasi',
+                          bgColor: Color(0xFFEFF6FF),
+                          borderColor: Color(0xFFBFDBFE),
+                          textColor: Color(0xFF1D4ED8),
+                        ),
+                      ),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: StatusCard(
+                          count: data.diproses.toString(),
+                          label: 'Diproses',
+                          bgColor: Color(0xFFFAF5FF),
+                          borderColor: Color(0xFFE9D5FF),
+                          textColor: Color(0xFF7E22CE),
+                        ),
+                      ),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: StatusCard(
+                          count: data.selesai.toString(),
+                          label: 'Selesai',
+                          bgColor: Color(0xFFECFDF5),
+                          borderColor: Color(0xFFA7F3D0),
+                          textColor: Color(0xFF047857),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Header Laporan Terbaru
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: const [
+                      Text(
+                        'Laporan Terbaru',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      Text(
+                        '3 Terkini',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.grey,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+
+                  // List Laporan
+                if (data.laporanTerbaru.isEmpty)
+                  const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(20),
+                      child: Text(
+                        'Belum ada laporan terbaru.',
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                    ),
+                  )
+                else
+                  ...data.laporanTerbaru.map((laporan) {
+                    Color statusBg;
+                    Color statusColor;
+
+                    switch (laporan.status.trim()) {
+                      case 'Diajukan':
+                        statusBg = const Color(0xFFFFFBEC);
+                        statusColor = const Color(0xFFB45309);
+                        break;
+                      case 'Diverifikasi':
+                        statusBg = const Color(0xFFEFF6FF);
+                        statusColor = const Color(0xFF1D4ED8);
+                        break;
+                      case 'Diproses':
+                        statusBg = const Color(0xFFFAF5FF);
+                        statusColor = const Color(0xFF7E22CE);
+                        break;
+                      case 'Selesai':
+                        statusBg = const Color(0xFFECFDF5);
+                        statusColor = const Color(0xFF047857);
+                        break;
+                      default:
+                        statusBg = Colors.grey.shade100;
+                        statusColor = Colors.grey.shade700;
+                    }
+
+                    return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(18),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => DetailLaporanPage(
+                              laporan: laporan,
                             ),
-                          ],
-                        ),
+                          ),
+                        );
+                      },
+                      child: LaporanCard(
+                        icon: Icons.description_outlined,
+                        iconBg: const Color(0xFFE0F2FE),
+                        iconColor: const Color(0xFF0284C7),
+                        title: laporan.deskripsi,
+                        code: '#CR-${laporan.idLaporan}',
+                        location: laporan.lokasi,
+                        locationColor: Colors.grey,
+                        date: formatTanggal(laporan.waktuDibuat),
+                        statusText: laporan.status,
+                        statusBg: statusBg,
+                        statusColor: statusColor,
+                        isBordered: false,
                       ),
                     ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              // Header Status Laporan Saya
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: const [
-                  Text(
-                    'Status Laporan Saya',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
-                  ),
-                  Text(
-                    'Lihat Detail',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF1D5EF8),
-                    ),
-                  ),
+                    );
+                  }),
                 ],
               ),
-              const SizedBox(height: 14),
-
-              // Status Cards (2 1 1 2)
-              Row(
-                children: const [
-                  Expanded(
-                    child: StatusCard(
-                      count: '2',
-                      label: 'Diajukan',
-                      bgColor: Color(0xFFFFFBEC),
-                      borderColor: Color(0xFFFFE082),
-                      textColor: Color(0xFFB45309),
-                    ),
-                  ),
-                  SizedBox(width: 8),
-                  Expanded(
-                    child: StatusCard(
-                      count: '1',
-                      label: 'Diverifikasi',
-                      bgColor: Color(0xFFEFF6FF),
-                      borderColor: Color(0xFFBFDBFE),
-                      textColor: Color(0xFF1D4ED8),
-                    ),
-                  ),
-                  SizedBox(width: 8),
-                  Expanded(
-                    child: StatusCard(
-                      count: '1',
-                      label: 'Diproses',
-                      bgColor: Color(0xFFFAF5FF),
-                      borderColor: Color(0xFFE9D5FF),
-                      textColor: Color(0xFF7E22CE),
-                    ),
-                  ),
-                  SizedBox(width: 8),
-                  Expanded(
-                    child: StatusCard(
-                      count: '2',
-                      label: 'Selesai',
-                      bgColor: Color(0xFFECFDF5),
-                      borderColor: Color(0xFFA7F3D0),
-                      textColor: Color(0xFF047857),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-
-              // Header Laporan Terbaru
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: const [
-                  Text(
-                    'Laporan Terbaru',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
-                  ),
-                  Text(
-                    '3 Terkini',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.grey,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 14),
-
-              // List Laporan
-              const LaporanCard(
-                icon: Icons.air,
-                iconBg: Color(0xFFE0F2FE),
-                iconColor: Color(0xFF0284C7),
-                title: 'AC di LAP RPL...',
-                code: '#CR-2026-0941',
-                location: 'LAP RPL',
-                locationColor: Colors.red,
-                date: '19 Sep 2026',
-                statusText: 'Diajukan',
-                statusBg: Color(0xFFFFFBEC),
-                statusColor: Color(0xFFB45309),
-                isBordered: true,
-              ),
-              const SizedBox(height: 12),
-              const LaporanCard(
-                icon: Icons.bolt,
-                iconBg: Color(0xFFFEF9C3),
-                iconColor: Color(0xFFCA8A04),
-                title: 'Lampu JT3 Mati',
-                code: '#CR-0892',
-                location: 'JT3',
-                locationColor: Colors.grey,
-                date: '18 Sep 2026',
-                statusText: 'Diverifikasi',
-                statusBg: Color(0xFFEFF6FF),
-                statusColor: Color(0xFF1D4ED8),
-                isBordered: false,
-              ),
-              const SizedBox(height: 12),
-              const LaporanCard(
-                icon: Icons.chair_outlined,
-                iconBg: Color(0xFFECFDF5),
-                iconColor: Color(0xFF059669),
-                title: 'Kursi Rusak di JT1',
-                code: '#CR-0845',
-                location: 'JT1',
-                locationColor: Colors.grey,
-                date: '17 Sep 2026',
-                statusText: 'Selesai',
-                statusBg: Color(0xFFECFDF5),
-                statusColor: Color(0xFF047857),
-                isBordered: false,
-              ),
-              const SizedBox(height: 20),
-            ],
-          ),
-        ),
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: 0,
-        selectedItemColor: const Color(0xFF1D5EF8),
-        unselectedItemColor: Colors.grey,
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: Colors.white,
-        elevation: 10,
-        items: [
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined),
-            activeIcon: Icon(Icons.home),
-            label: 'Beranda',
-          ),
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.history),
-            label: 'Riwayat',
-          ),
-          BottomNavigationBarItem(
-            icon: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: const BoxDecoration(
-                color: Color(0xFF1D5EF8),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.add, color: Colors.white, size: 24),
             ),
-            label: 'Buat Laporan',
           ),
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline),
-            activeIcon: Icon(Icons.person),
-            label: 'Profil',
+          bottomNavigationBar: BottomNavBar(
+            currentIndex: 0,
+            onTap: handleBottomNavigation,
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
@@ -476,14 +563,19 @@ class LaporanCard extends StatelessWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          title,
-                          style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black87,
+                        Expanded(
+                          child: Text(
+                            title,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
+                            ),
                           ),
                         ),
+                        const SizedBox(width: 8),
                         Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 10,

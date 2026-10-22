@@ -5,6 +5,7 @@ import 'lupa_password_page2.dart';
 import 'lupa_password_page3.dart';
 import '../../controllers/auth_controller.dart';
 import '../../widgets/custom_dialog.dart';
+import '../mahasiswa/dashboard_page.dart';
 
 
 class LoginPage extends StatefulWidget {
@@ -77,17 +78,19 @@ class _LoginPageState extends State<LoginPage> {
       );
 
       if (response.user != null) {
+        if (!mounted) return;
+
         setState(() {
           isLoading = false;
         });
 
-        showSuccessDialog(
-          context,
-          'Login berhasil',
-        );
+        debugPrint('Login berhasil');
 
-        print(
-          'USER LOGIN: ${response.user!.email}',
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const DashboardPage(),
+          ),
         );
       }
 

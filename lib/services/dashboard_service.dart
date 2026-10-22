@@ -70,19 +70,27 @@ class DashboardService {
       }
     }
 
-    final laporanTerbaru =
-    await supabase
-        .from('laporan')
-        .select()
-        .eq(
-          'id_pengguna',
-          profile['id_pengguna'],
-        )
-        .order(
-          'lpr_waktu_dibuat',
-          ascending: false,
-        )
-        .limit(3);
+    print('========== HASIL DASHBOARD ==========');
+    print('TOTAL LAPORAN: ${laporan.length}');
+    print('DIAJUKAN: $diajukan');
+    print('DIVERIFIKASI: $diverifikasi');
+    print('DIPROSES: $diproses');
+    print('SELESAI: $selesai');
+    print('=====================================');
+
+    final laporanTerbaru = await supabase
+      .from('laporan')
+      .select('''
+        id_laporan,
+        lokasi,
+        lpr_deskripsi,
+        status,
+        lpr_waktu_dibuat,
+        pengguna!inner(nama_pengguna)
+      ''')
+      .eq('id_pengguna', profile['id_pengguna'])
+      .order('lpr_waktu_dibuat', ascending: false)
+      .limit(3);
 
     final listLaporan =
     laporanTerbaru

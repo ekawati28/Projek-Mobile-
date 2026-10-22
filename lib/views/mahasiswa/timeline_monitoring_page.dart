@@ -1,23 +1,213 @@
 
 import 'package:flutter/material.dart';
+import '../../services/timeline_service.dart';
 
-class TimelineMonitoringPage extends StatelessWidget {
-  const TimelineMonitoringPage({super.key});
 
-  static const Color biru = Color(0xFF315B9D);
-  static const Color teks = Color(0xFF273449);
-  static const Color abu = Color(0xFF718096);
-  static const Color garis = Color(0xFFE1E8F2);
-  static const Color latar = Color(0xFFF7F9FC);
-  static const Color hijau = Color(0xFF00BF8A);
+class TimelineMonitoringPage extends StatefulWidget {
+  final int idLaporan;
+
+  const TimelineMonitoringPage({
+    super.key,
+    required this.idLaporan,
+  });
+
+  @override
+    State<TimelineMonitoringPage> createState() =>
+        _TimelineMonitoringPageState();
+  }
+
+  class _TimelineMonitoringPageState extends State<TimelineMonitoringPage> {
+    final TimelineService timelineService = TimelineService();
+
+    late Future<Map<String, dynamic>> timelineFuture;
+    late Future<List<Map<String, dynamic>>> riwayatFuture;
+
+    static const Color biru = Color(0xFF315B9D);
+    static const Color teks = Color(0xFF273449);
+    static const Color abu = Color(0xFF718096);
+    static const Color garis = Color(0xFFE1E8F2);
+    static const Color latar = Color(0xFFF7F9FC);
+    static const Color hijau = Color(0xFF00BF8A);
+
+  @override
+  void initState() {
+    super.initState();
+
+    timelineFuture = timelineService.getDetailLaporan(
+      widget.idLaporan,
+    );
+
+    riwayatFuture = timelineService.getRiwayatLaporan(
+      widget.idLaporan,
+    );
+  }
+
+  String formatTanggalRiwayat(dynamic tanggal) {
+    if (tanggal == null) return '-';
+
+    final waktu = DateTime.tryParse(tanggal.toString());
+    if (waktu == null) return '-';
+
+    final lokal = waktu.toLocal();
+
+    const bulan = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
+      'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des',
+    ];
+
+    return '${lokal.day} ${bulan[lokal.month - 1]} ${lokal.year}';
+  }
+
+  String formatJamRiwayat(dynamic tanggal) {
+    if (tanggal == null) return '-';
+
+    final waktu = DateTime.tryParse(tanggal.toString());
+    if (waktu == null) return '-';
+
+    final lokal = waktu.toLocal();
+
+    final jam = lokal.hour.toString().padLeft(2, '0');
+    final menit = lokal.minute.toString().padLeft(2, '0');
+
+    return '$jam:$menit';
+  }
+
+  Color warnaStatus(String status) {
+    switch (status.toLowerCase()) {
+      case 'diverifikasi':
+        return const Color(0xFF2563EB);
+      case 'diproses':
+        return const Color(0xFF7C3AED);
+      case 'selesai':
+        return const Color(0xFF059669);
+      default:
+        return const Color(0xFF9A6700);
+    }
+  }
+
+  Color warnaBackgroundStatus(String status) {
+    switch (status.toLowerCase()) {
+      case 'diverifikasi':
+        return const Color(0xFFDBEAFE);
+      case 'diproses':
+        return const Color(0xFFEDE9FE);
+      case 'selesai':
+        return const Color(0xFFD1FAE5);
+      default:
+        return const Color(0xFFFFF3CD);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        child: Column(
-          children: [
+        child: FutureBuilder<Map<String, dynamic>>(
+          future: timelineFuture,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(
+                child: CircularProgressIndicator(),
+              );
+            }
+
+            if (snapshot.hasError) {
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Text(
+                    'Gagal memuat laporan: ${snapshot.error}',
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              );
+            }
+
+            if (!snapshot.hasData) {
+              return const Center(
+                child: Text('Laporan tidak ditemukan.'),
+              );
+            }
+
+            final detail = snapshot.data!;
+
+            final status = detail['status']?.toString().trim().toLowerCase()
+                ?? 'diajukan';
+
+            const tahapan = [
+              'diajukan',
+              'diverifikasi',
+              'diproses',
+              'selesai',
+            ];
+
+            final tahapSekarang = tahapan.indexOf(status);
+
+          return FutureBuilder<List<Map<String, dynamic>>>(
+            future: riwayatFuture,
+            builder: (context, riwayatSnapshot) {
+              if (riwayatSnapshot.connectionState ==
+                  ConnectionState.waiting) {
+                return const Center(
+                  child: CircularProgressIndicator(),
+                );
+              }
+
+              if (riwayatSnapshot.hasError) {
+                return Center(
+                  child: Text(
+                    'Gagal memuat riwayat: ${riwayatSnapshot.error}',
+                    textAlign: TextAlign.center,
+                  ),
+                );
+              }
+
+              final riwayat = riwayatSnapshot.data ??
+                  <Map<String, dynamic>>[];
+
+              final riwayatDiajukan = riwayat.where(
+                (item) =>
+                    item['status']?.toString().trim().toLowerCase() ==
+                    'diajukan',
+              ).toList();
+
+              final dataDiajukan = riwayatDiajukan.isNotEmpty
+                  ? riwayatDiajukan.first
+                  : null;
+
+              final riwayatDiverifikasi = riwayat.where(
+                (item) =>
+                    item['status']?.toString().trim().toLowerCase() ==
+                    'diverifikasi',
+              ).toList();
+
+              final dataDiverifikasi = riwayatDiverifikasi.isNotEmpty
+                  ? riwayatDiverifikasi.first
+                  : null;
+
+              final riwayatDiproses = riwayat.where(
+                (item) =>
+                    item['status']?.toString().trim().toLowerCase() ==
+                    'diproses',
+              ).toList();
+
+              final dataDiproses = riwayatDiproses.isNotEmpty
+                  ? riwayatDiproses.first
+                  : null;
+              
+              final riwayatSelesai = riwayat.where(
+                (item) =>
+                    item['status']?.toString().trim().toLowerCase() ==
+                    'selesai',
+              ).toList();
+
+              final dataSelesai = riwayatSelesai.isNotEmpty
+                  ? riwayatSelesai.first
+                  : null;
+
+              return Column(
+              children: [
             // HEADER
             Container(
               width: double.infinity,
@@ -99,9 +289,9 @@ class TimelineMonitoringPage extends StatelessWidget {
                       ),
                       borderRadius: BorderRadius.circular(5),
                     ),
-                    child: const Text(
-                      '#CR-2026-\n0941',
-                      style: TextStyle(
+                    child: Text(
+                      '#CR-${detail['id_laporan']}',
+                      style: const TextStyle(
                         color: Color(0xFF2458A6),
                         fontSize: 9,
                         height: 1.4,
@@ -132,22 +322,24 @@ class TimelineMonitoringPage extends StatelessWidget {
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Expanded(
+                          Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'AC di LAP RPL Bermasalah',
-                                  style: TextStyle(
+                                  (detail['judul']?.toString().trim().isNotEmpty ?? false)
+                                      ? detail['judul'].toString()
+                                      : detail['lpr_deskripsi']?.toString() ?? '-',
+                                  style: const TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.bold,
                                     color: teks,
                                   ),
                                 ),
-                                SizedBox(height: 8),
+                                const SizedBox(height: 8),
                                 Text(
-                                  'Kampus III (Jati) • LAP RPL',
-                                  style: TextStyle(
+                                  detail['lokasi']?.toString() ?? '-',
+                                  style: const TextStyle(
                                     fontSize: 9,
                                     color: abu,
                                   ),
@@ -155,6 +347,7 @@ class TimelineMonitoringPage extends StatelessWidget {
                               ],
                             ),
                           ),
+
                           const SizedBox(width: 5),
                           Container(
                             padding: const EdgeInsets.symmetric(
@@ -162,13 +355,13 @@ class TimelineMonitoringPage extends StatelessWidget {
                               vertical: 5,
                             ),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFFFF3CD),
+                              color: warnaBackgroundStatus(status),
                               borderRadius: BorderRadius.circular(20),
                             ),
-                            child: const Text(
-                              'Diajukan',
+                            child: Text(
+                              detail['status']?.toString() ?? 'Diajukan',
                               style: TextStyle(
-                                color: Color(0xFF9A6700),
+                                color: warnaStatus(status),
                                 fontSize: 9,
                               ),
                             ),
@@ -180,60 +373,74 @@ class TimelineMonitoringPage extends StatelessWidget {
                     const SizedBox(height: 16),
 
                     // TAHAP 1
-                    const TimelineTile(
+                    TimelineTile(
                       number: '1',
                       title: 'Diajukan',
                       subtitle: 'Laporan Dikirim Mahasiswa',
                       description:
-                          'Laporan telah dikirim oleh mahasiswa '
-                          '(Budi Santoso) dan masuk ke antrean sistem.',
-                      date: '19 Sep 2026',
-                      time: '08:32 WIT',
-                      isCompleted: true,
+                          dataDiajukan?['catatan']?.toString() ??
+                          'Belum ada catatan pengajuan.',
+                      date: formatTanggalRiwayat(
+                        dataDiajukan?['rwyt_waktu_dibuat'],
+                      ),
+                      time: formatJamRiwayat(
+                        dataDiajukan?['rwyt_waktu_dibuat'],
+                      ),
+                      isCompleted: tahapSekarang >= 0,
                       isLast: false,
                     ),
 
                     // TAHAP 2
-                    const TimelineTile(
+                    TimelineTile(
                       number: '2',
                       title: 'Diverifikasi',
                       subtitle: 'Diperiksa Administrator',
                       description:
-                          'Laporan telah diperiksa Administrator Biro '
-                          'Sarana Prasarana. Keluhan AC di LAP RPL '
-                          'dinyatakan valid dan menunggu pemilihan teknisi.',
-                      date: '19 Sep 2026',
-                      time: '09:15 WIT',
-                      isCompleted: false,
+                          dataDiverifikasi?['catatan']?.toString() ??
+                          'Belum ada catatan verifikasi.',
+                      date: formatTanggalRiwayat(
+                        dataDiverifikasi?['rwyt_waktu_dibuat'],
+                      ),
+                      time: formatJamRiwayat(
+                        dataDiverifikasi?['rwyt_waktu_dibuat'],
+                      ),
+                      isCompleted: tahapSekarang >= 1,
                       isLast: false,
                     ),
 
                     // TAHAP 3
-                    const TimelineTile(
+                    TimelineTile(
                       number: '3',
                       title: 'Diproses',
                       subtitle: 'Sedang Ditangani Petugas',
                       description:
-                          'Laporan sedang ditangani oleh petugas (Budi). '
-                          'Sedang dilakukan perbaikan AC di lokasi LAP RPL.',
-                      date: '19 Sep 2026',
-                      time: '10:00 WIT',
-                      isCompleted: false,
+                          dataDiproses?['catatan']?.toString() ??
+                          'Belum ada catatan penanganan.',
+                      date: formatTanggalRiwayat(
+                        dataDiproses?['rwyt_waktu_dibuat'],
+                      ),
+                      time: formatJamRiwayat(
+                        dataDiproses?['rwyt_waktu_dibuat'],
+                      ),
+                      isCompleted: tahapSekarang >= 2,
                       isLast: false,
                     ),
 
                     // TAHAP 4
-                    const TimelineTile(
+                    TimelineTile(
                       number: '4',
                       title: 'Selesai',
                       subtitle: 'Permasalahan Telah Ditangani',
                       description:
-                          'Kapasitor 1.5 PK telah diganti dan freon '
-                          'R32 diisi ulang. Uji fungsi pendinginan '
-                          'stabil pada suhu 20°C.',
-                      date: '19 Sep 2026',
-                      time: '11:30 WIT',
-                      isCompleted: false,
+                          dataSelesai?['catatan']?.toString() ??
+                          'Laporan belum dinyatakan selesai.',
+                      date: formatTanggalRiwayat(
+                        dataSelesai?['rwyt_waktu_dibuat'],
+                      ),
+                      time: formatJamRiwayat(
+                        dataSelesai?['rwyt_waktu_dibuat'],
+                      ),
+                      isCompleted: tahapSekarang >= 3,
                       isLast: true,
                     ),
                   ],
@@ -266,6 +473,10 @@ class TimelineMonitoringPage extends StatelessWidget {
               ),
             ),
           ],
+          );
+        },
+        );
+          },
         ),
       ),
     );
@@ -297,11 +508,11 @@ class TimelineTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const Color teks = TimelineMonitoringPage.teks;
-    const Color abu = TimelineMonitoringPage.abu;
+    const Color teks = Color(0xFF273449);
+    const Color abu = Color(0xFF718096);
 
     final Color warnaIkon = isCompleted
-        ? TimelineMonitoringPage.hijau
+        ? const Color(0xFF00BF8A)
         : const Color(0xFFB8C9E1);
 
     return IntrinsicHeight(

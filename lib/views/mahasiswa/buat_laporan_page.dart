@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../services/laporan_service.dart';
 
 void main() {
   runApp(const MyApp());
@@ -36,9 +37,9 @@ class _BuatLaporanScreenState extends State<BuatLaporanScreen> {
   String selectedKategori = 'AC';
   String selectedLokasi = 'LAB RPL';
   String selectedLokasiSub = 'Kampus III Unkhair Jati';
-  final TextEditingController _deskripsiController = TextEditingController(
-    text: 'AC di LAB RPL tidak menyala sejak pagi dan ruangan menjadi sangat panas saat praktikum berlangsung. Remote tidak merespons.',
-  );
+
+  final TextEditingController _judulController = TextEditingController();
+  final TextEditingController _deskripsiController = TextEditingController();
   int _currentIndex = 2;
 
   @override
@@ -215,8 +216,42 @@ class _BuatLaporanScreenState extends State<BuatLaporanScreen> {
               ),
             ),
           ),
+
           const SizedBox(height: 24),
-          const Text('3. Deskripsi Kerusakan *', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF111827))),
+
+          const Text(
+            '3. Judul Laporan *',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF111827),
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF9FAFB),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: const Color(0xFFE5E7EB),
+              ),
+            ),
+            child: TextField(
+              controller: _judulController,
+              maxLength: 100,
+              decoration: const InputDecoration(
+                border: InputBorder.none,
+                hintText: 'Contoh: AC Ruang Lab RPL Rusak',
+                counterText: '',
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 24),
+          const Text('4. Deskripsi Kerusakan *', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF111827))),
           const SizedBox(height: 12),
           Container(
             width: double.infinity, constraints: const BoxConstraints(minHeight: 120), padding: const EdgeInsets.all(16),
@@ -228,7 +263,7 @@ class _BuatLaporanScreenState extends State<BuatLaporanScreen> {
             ),
           ),
           const SizedBox(height: 24),
-          const Text('4. Lampirkan Foto Bukti *', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF111827))),
+          const Text('5. Lampirkan Foto Bukti *', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF111827))),
           const SizedBox(height: 12),
           GestureDetector(
             onTap: () {}, behavior: HitTestBehavior.opaque,
@@ -251,16 +286,47 @@ class _BuatLaporanScreenState extends State<BuatLaporanScreen> {
           SizedBox(
             width: double.infinity, height: 52,
             child: ElevatedButton(
-              onPressed: () {
-                Navigator.push(
+              onPressed: () async {
+                final judul = _judulController.text.trim();
+                final deskripsi = _deskripsiController.text.trim();
+
+                if (judul.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Judul laporan harus diisi!'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                  return;
+                }
+
+                if (deskripsi.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Deskripsi kerusakan harus diisi!'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                  return;
+                }
+
+                final laporanBerhasil = await Navigator.push<bool>(
                   context,
-                  MaterialPageRoute(
+                  MaterialPageRoute<bool>(
                     builder: (context) => DeskripsiFotoScreen(
+                      judul: judul,
                       kategori: selectedKategori,
                       lokasi: selectedLokasi,
+                      deskripsiAwal: deskripsi,
                     ),
                   ),
                 );
+
+                if (!mounted) return;
+
+                if (laporanBerhasil == true) {
+                  Navigator.pop(context, true);
+                }
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF2563EB), foregroundColor: Colors.white,
@@ -294,7 +360,19 @@ class _BuatLaporanScreenState extends State<BuatLaporanScreen> {
   Widget _buildNavItem(IconData icon, String label, int index) {
     final isActive = _currentIndex == index;
     return GestureDetector(
-      onTap: () { setState(() { _currentIndex = index; }); },
+      onTap: () {
+        if (index == 0) {
+          // Kembali ke Dashboard sebelumnya
+          if (Navigator.canPop(context)) {
+            Navigator.pop(context);
+          }
+          return;
+        }
+
+        setState(() {
+          _currentIndex = index;
+        });
+      },
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -326,6 +404,7 @@ class _BuatLaporanScreenState extends State<BuatLaporanScreen> {
 
   @override
   void dispose() {
+    _judulController.dispose();
     _deskripsiController.dispose();
     super.dispose();
   }
@@ -621,23 +700,120 @@ class _PilihLokasiScreenState extends State<PilihLokasiScreen> {
 // SCREEN 4: DESKRIPSI & FOTO
 // ============================================================
 class DeskripsiFotoScreen extends StatefulWidget {
+  final String judul;
   final String kategori;
   final String lokasi;
-  
+  final String deskripsiAwal;
+
   const DeskripsiFotoScreen({
-    super.key, 
-    this.kategori = 'AC',
-    this.lokasi = 'LAP RPL',
+    super.key,
+    required this.judul,
+    required this.kategori,
+    required this.lokasi,
+    required this.deskripsiAwal,
   });
 
   @override
-  State<DeskripsiFotoScreen> createState() => _DeskripsiFotoScreenState();
+  State<DeskripsiFotoScreen> createState() =>
+      _DeskripsiFotoScreenState();
 }
 
 class _DeskripsiFotoScreenState extends State<DeskripsiFotoScreen> {
-  final TextEditingController _deskripsiController = TextEditingController(
-    text: 'AC di LAP RPL tidak menyala sejak pagi dan ruangan menjadi sangat panas saat praktikum berlangsung.',
-  );
+  final LaporanService laporanService = LaporanService();
+
+  bool isLoading = false;
+
+  Future<void> kirimLaporan() async {
+    if (isLoading) return;
+
+    final judul = widget.judul.trim();
+    final deskripsi = _deskripsiController.text.trim();
+
+    if (judul.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Judul laporan harus diisi!'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    if (deskripsi.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Deskripsi permasalahan harus diisi!'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      isLoading = true;
+    });
+
+    try {
+      final idKategori =
+          await laporanService.getIdKategori(widget.kategori);
+
+      final idLaporan = await laporanService.buatLaporan(
+        judul: judul,
+        idKategori: idKategori,
+        lokasi: widget.lokasi,
+        deskripsi: deskripsi,
+      );
+
+      if (!mounted) return;
+
+      // Buka halaman berhasil tanpa mengganti halaman ini
+      await Navigator.push<bool>(
+        context,
+        MaterialPageRoute<bool>(
+          builder: (context) => LaporanBerhasilScreen(
+            nomorTiket: '#CR-$idLaporan',
+            kategori: widget.kategori,
+            lokasi: widget.lokasi,
+            waktu: DateTime.now().toLocal().toString(),
+          ),
+        ),
+      );
+
+      if (!mounted) return;
+
+      // Laporan sudah tersimpan, teruskan true ke BuatLaporanScreen
+      Navigator.pop(context, true);
+
+    } catch (e) {
+      if (!mounted) return;
+
+      debugPrint('Error kirim laporan: $e');
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Gagal mengirim laporan. Silakan coba lagi.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
+    }
+  }
+  
+  late final TextEditingController _deskripsiController;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _deskripsiController = TextEditingController(
+      text: widget.deskripsiAwal,
+    );
+  }
   
   bool fotoUploaded = false;
   String? fotoName;
@@ -966,28 +1142,7 @@ class _DeskripsiFotoScreenState extends State<DeskripsiFotoScreen> {
                 height: 52,
                 child: ElevatedButton(
                   // ✅ DIPERBARUI: Navigasi ke halaman Laporan Berhasil
-                  onPressed: () {
-                    if (_deskripsiController.text.trim().isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Deskripsi permasalahan harus diisi!'), backgroundColor: Color(0xFFEF4444)));
-                      return;
-                    }
-                    if (!fotoUploaded) {
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Foto bukti kerusakan harus dilampirkan!'), backgroundColor: Color(0xFFEF4444)));
-                      return;
-                    }
-                    
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => LaporanBerhasilScreen(
-                          nomorTiket: '#CR-2026-0941',
-                          kategori: widget.kategori,
-                          lokasi: widget.lokasi,
-                          waktu: fotoTimestamp ?? '19/10/2026 08:32 WIT',
-                        ),
-                      ),
-                    );
-                  },
+                  onPressed: isLoading ? null : kirimLaporan,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF2563EB),
                     foregroundColor: Colors.white,
@@ -995,14 +1150,29 @@ class _DeskripsiFotoScreenState extends State<DeskripsiFotoScreen> {
                     elevation: 4,
                     shadowColor: const Color(0xFF2563EB).withOpacity(0.3),
                   ),
-                  child: const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.send, size: 20),
-                      SizedBox(width: 8),
-                      Text('Kirim Laporan', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                    ],
-                  ),
+                  child: isLoading
+                    ? const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.send, size: 20),
+                          SizedBox(width: 8),
+                          Text(
+                            'Kirim Laporan',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
                 ),
               ),
             ),
@@ -1119,7 +1289,7 @@ class LaporanBerhasilScreen extends StatelessWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Column(
+                    Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
@@ -1131,8 +1301,8 @@ class LaporanBerhasilScreen extends StatelessWidget {
                         ),
                         SizedBox(height: 4),
                         Text(
-                          '#CR-2026-0941',
-                          style: TextStyle(
+                          nomorTiket,
+                          style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
                             color: Color(0xFF2563EB),
@@ -1318,7 +1488,7 @@ class LaporanBerhasilScreen extends StatelessWidget {
                 height: 52,
                 child: OutlinedButton(
                   onPressed: () {
-                    Navigator.popUntil(context, (route) => route.isFirst);
+                    Navigator.pop(context, true);
                   },
                   style: OutlinedButton.styleFrom(
                     foregroundColor: const Color(0xFF111827),
