@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'views/mahasiswa/detail_laporan_page.dart';
 import 'views/mahasiswa/riwayat_laporan.dart';
+import 'views/mahasiswa/admin/dashboard_admin.dart';
+import 'views/mahasiswa/admin/profile_admin.dart';
 
 void main() {
   runApp(const CampusReportPreviewApp());
@@ -21,7 +23,7 @@ class CampusReportPreviewApp extends StatelessWidget {
           seedColor: const Color(0xFF2563EB),
         ),
       ),
-      home: const RiwayatLaporanScreen(),
+      home: const DashboardAdminScreen(),
     );
   }
 }
