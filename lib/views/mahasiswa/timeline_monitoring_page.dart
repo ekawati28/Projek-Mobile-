@@ -41,6 +41,18 @@ class TimelineMonitoringPage extends StatefulWidget {
       widget.idLaporan,
     );
   }
+  
+  void muatUlangTimeline() {
+    setState(() {
+      timelineFuture = timelineService.getDetailLaporan(
+        widget.idLaporan,
+      );
+
+      riwayatFuture = timelineService.getRiwayatLaporan(
+        widget.idLaporan,
+      );
+    });
+  }
 
   String formatTanggalRiwayat(dynamic tanggal) {
     if (tanggal == null) return '-';
@@ -173,8 +185,12 @@ class TimelineMonitoringPage extends StatefulWidget {
               ).toList();
 
               final dataDiajukan = riwayatDiajukan.isNotEmpty
-                  ? riwayatDiajukan.first
-                  : null;
+                ? riwayatDiajukan.first
+                : <String, dynamic>{
+                    'status': 'diajukan',
+                    'rwyt_waktu_dibuat': detail['lpr_waktu_dibuat'],
+                    'catatan': 'Laporan dikirim oleh mahasiswa.',
+                  };
 
               final riwayatDiverifikasi = riwayat.where(
                 (item) =>
@@ -211,7 +227,7 @@ class TimelineMonitoringPage extends StatefulWidget {
             // HEADER
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 15),
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
               decoration: const BoxDecoration(
                 color: Colors.white,
                 border: Border(
@@ -275,9 +291,19 @@ class TimelineMonitoringPage extends StatefulWidget {
                     ),
                   ),
                   const SizedBox(width: 6),
+                  
+                  IconButton(
+                    tooltip: 'Muat ulang timeline',
+                    onPressed: muatUlangTimeline,
+                    icon: const Icon(
+                      Icons.refresh,
+                      color: Color(0xFF315B9D),
+                    ),
+                  ),
+
                   Container(
                     width: 82,
-                    margin: const EdgeInsets.only(top: 20),
+                    margin: const EdgeInsets.only(top: 8),
                     padding: const EdgeInsets.symmetric(
                       horizontal: 7,
                       vertical: 8,
@@ -306,7 +332,7 @@ class TimelineMonitoringPage extends StatefulWidget {
             // KONTEN YANG BISA DIGULIR
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
+                padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -370,7 +396,7 @@ class TimelineMonitoringPage extends StatefulWidget {
                       ),
                     ),
 
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 10),
 
                     // TAHAP 1
                     TimelineTile(
@@ -462,8 +488,7 @@ class TimelineMonitoringPage extends StatefulWidget {
                 ),
               ),
               child: const Text(
-                'Notifikasi status otomatis terkirim via aplikasi & '
-                'email mahasiswa.',
+                'Pantau perubahan status laporan secara berkala.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: Color(0xFF5877A6),
@@ -567,8 +592,8 @@ class TimelineTile extends StatelessWidget {
           // KARTU INFORMASI TAHAP
           Expanded(
             child: Container(
-              margin: const EdgeInsets.only(bottom: 13),
-              padding: const EdgeInsets.all(11),
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(13),

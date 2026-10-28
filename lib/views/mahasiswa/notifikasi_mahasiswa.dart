@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import '../../services/notifikasi_service.dart';
+import '../../models/laporan_model.dart';
+import '../../services/laporan_service.dart';
+import 'detail_laporan_page.dart';
 
 class NotifikasiMahasiswa extends StatefulWidget {
   const NotifikasiMahasiswa({super.key});
@@ -10,81 +14,110 @@ class NotifikasiMahasiswa extends StatefulWidget {
 class _NotifikasiMahasiswaState extends State<NotifikasiMahasiswa> {
   int _filterAktif = 0;
 
+  final LaporanService laporanService = LaporanService();
   final Color biru = const Color(0xFF2463FF);
 
-  final List<Map<String, dynamic>> _notifikasi = [
-    {
-      'judul': 'Laporan Sedang Diproses',
-      'pesan': 'Petugas teknisi sedang menangani permasalahan fasilitas.',
-      'kode': '#CR-2026-0941',
-      'waktu': '10 menit yang lalu',
-      'ikon': Icons.build_outlined,
-      'warna': const Color(0xFFF3DFFF),
-      'warnaIkon': const Color(0xFFAD39E8),
-      'dibaca': false,
-      'lokasi': 'LAP RPL',
-      'kategori': 'AC',
-      'deskripsi':
-          'AC di LAP RPL tidak menyala sejak pagi dan ruangan menjadi sangat panas saat praktikum berlangsung. Remote tidak merespons dan terdengar bunyi dari indoor unit.',
-    },
-    {
-      'judul': 'Laporan Telah Diverifikasi',
-      'pesan':
-          'Laporan sarpras Anda di LAP RPL sudah diperiksa dan diverifikasi.',
-      'kode': '#CR-2026-0941',
-      'waktu': '30 menit yang lalu',
-      'ikon': Icons.shield_outlined,
-      'warna': const Color(0xFFFFF1BF),
-      'warnaIkon': const Color(0xFFCF7900),
-      'dibaca': false,
-      'lokasi': 'LAP RPL',
-      'kategori': 'AC',
-      'deskripsi':
-          'Laporan kerusakan AC telah diperiksa dan diverifikasi oleh administrator.',
-    },
-    {
-      'judul': 'Laporan Berhasil Dikirim',
-      'pesan': 'Laporan fasilitas berhasil dikirim.',
-      'kode': '#CR-2026-0941',
-      'waktu': '1 jam yang lalu',
-      'ikon': Icons.send_outlined,
-      'warna': const Color(0xFFDBEAFE),
-      'warnaIkon': Color(0xFF2463FF),
-      'dibaca': true,
-      'lokasi': 'LAP RPL',
-      'kategori': 'AC',
-      'deskripsi':
-          'Laporan kerusakan fasilitas berhasil dikirim dan menunggu verifikasi administrator.',
-    },
-    {
-      'judul': 'Laporan Selesai',
-      'pesan': 'Permasalahan fasilitas Lampu LED JT3 telah ditangani.',
-      'kode': '#CR-2026-0892',
-      'waktu': 'Kemarin, 14:20 WIT',
-      'ikon': Icons.check_circle_outline,
-      'warna': const Color(0xFFD1FAE5),
-      'warnaIkon': Color(0xFF059669),
-      'dibaca': true,
-      'lokasi': 'JT3',
-      'kategori': 'Lampu',
-      'deskripsi':
-          'Permasalahan lampu LED di JT3 telah ditangani. Lampu sudah dapat digunakan kembali.',
-    },
-    {
-      'judul': 'Laporan Selesai',
-      'pesan': 'Permasalahan keran air di Toilet Lantai 1 telah ditangani.',
-      'kode': '#CR-2026-0814',
-      'waktu': '15 Sep 2026, 11:30 WIT',
-      'ikon': Icons.check_circle_outline,
-      'warna': const Color(0xFFD1FAE5),
-      'warnaIkon': Color(0xFF059669),
-      'dibaca': true,
-      'lokasi': 'Toilet Lantai 1',
-      'kategori': 'Keran air',
-      'deskripsi':
-          'Permasalahan keran air di Toilet Lantai 1 telah ditangani dan fasilitas dapat digunakan kembali.',
-    },
-  ];
+  
+  final NotifikasiService notifikasiService = NotifikasiService();
+
+  List<Map<String, dynamic>> _notifikasi = [];
+  bool _memuat = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _muatNotifikasi();
+  }
+
+  Future<void> _muatNotifikasi() async {
+    setState(() {
+      _memuat = true;
+      _error = null;
+    });
+
+    try {
+      final data = await notifikasiService.getNotifikasi();
+
+      if (!mounted) return;
+
+      setState(() {
+        _notifikasi = data.map((row) {
+          final judul = row['judul']?.toString() ?? 'Notifikasi';
+          final idLaporan = row['id_laporan'];
+          final sudahDibaca = row['baca'] == true;
+
+          final judulLower = judul.toLowerCase();
+
+          final IconData ikon =
+              judulLower.contains('selesai')
+                  ? Icons.check_circle_outline
+                  : judulLower.contains('proses')
+                      ? Icons.build_outlined
+                      : judulLower.contains('verifikasi')
+                          ? Icons.shield_outlined
+                          : Icons.notifications_outlined;
+
+          final Color warna =
+              judulLower.contains('selesai')
+                  ? const Color(0xFFD1FAE5)
+                  : judulLower.contains('proses')
+                      ? const Color(0xFFF3DFFF)
+                      : const Color(0xFFDBEAFE);
+
+          final Color warnaIkon =
+              judulLower.contains('selesai')
+                  ? const Color(0xFF059669)
+                  : judulLower.contains('proses')
+                      ? const Color(0xFFAD39E8)
+                      : const Color(0xFF2463FF);
+
+          String waktu = '-';
+
+          if (row['not_waktu_dibuat'] != null) {
+            final tanggal = DateTime.tryParse(
+              row['not_waktu_dibuat'].toString(),
+            );
+
+            if (tanggal != null) {
+              final t = tanggal.toLocal();
+              waktu =
+                  '${t.day.toString().padLeft(2, '0')}/'
+                  '${t.month.toString().padLeft(2, '0')}/'
+                  '${t.year}, '
+                  '${t.hour.toString().padLeft(2, '0')}:'
+                  '${t.minute.toString().padLeft(2, '0')}';
+            }
+          }
+
+          return <String, dynamic>{
+            'id_notifikasi': row['id_notifikasi'],
+            'id_laporan': idLaporan,
+            'judul': judul,
+            'pesan': row['pesan']?.toString() ?? '',
+            'kode': idLaporan == null ? '-' : '#CR-$idLaporan',
+            'waktu': waktu,
+            'ikon': ikon,
+            'warna': warna,
+            'warnaIkon': warnaIkon,
+            'dibaca': sudahDibaca,
+            'lokasi': 'Laporan fasilitas',
+            'kategori': 'Fasilitas',
+            'deskripsi': row['pesan']?.toString() ?? '',
+          };
+        }).toList();
+
+        _memuat = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _error = e.toString();
+        _memuat = false;
+      });
+    }
+  }
 
   List<Map<String, dynamic>> get _notifikasiTampil {
     if (_filterAktif == 1) {
@@ -97,26 +130,96 @@ class _NotifikasiMahasiswaState extends State<NotifikasiMahasiswa> {
   int get _jumlahBelumDibaca {
     return _notifikasi.where((item) => item['dibaca'] == false).length;
   }
-
-  void _bacaSemua() {
-    setState(() {
+  
+  Future<void> _bacaSemua() async {
+    try {
       for (final item in _notifikasi) {
-        item['dibaca'] = true;
+        if (item['dibaca'] == false &&
+            item['id_notifikasi'] != null) {
+          await notifikasiService.tandaiDibaca(
+            (item['id_notifikasi'] as num).toInt(),
+          );
+        }
       }
-    });
+
+      if (!mounted) return;
+
+      await _muatNotifikasi();
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Gagal menandai notifikasi sebagai dibaca.'),
+        ),
+      );
+    }
   }
+  
+  
+  Future<void> _bukaDetail(Map<String, dynamic> item) async {
+    try {
+      final idNotifikasi = item['id_notifikasi'];
+      final idLaporan = item['id_laporan'];
 
-  void _bukaDetail(Map<String, dynamic> item) {
-    setState(() {
-      item['dibaca'] = true;
-    });
+      if (idLaporan == null) {
+        throw Exception('ID laporan tidak ditemukan.');
+      }
 
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => DetailLaporanPage(item: item),
-      ),
-    );
+      // Tandai notifikasi sebagai dibaca.
+      if (item['dibaca'] == false && idNotifikasi != null) {
+        await notifikasiService.tandaiDibaca(
+          (idNotifikasi as num).toInt(),
+        );
+      }
+
+      if (!mounted) return;
+
+      setState(() {
+        item['dibaca'] = true;
+      });
+
+      // Ambil data laporan terbaru dari Supabase.
+      final detail = await laporanService.getDetailLaporan(
+        (idLaporan as num).toInt(),
+      );
+
+      if (!mounted) return;
+
+      final laporan = LaporanModel(
+        idLaporan: (detail['id_laporan'] as num).toInt(),
+        lokasi: detail['lokasi']?.toString() ?? '-',
+        deskripsi: detail['lpr_deskripsi']?.toString() ?? '-',
+        status: detail['status']?.toString() ?? 'Diajukan',
+        waktuDibuat: DateTime.parse(
+          detail['lpr_waktu_dibuat'].toString(),
+        ),
+        namaPelapor: detail['nama_pelapor']?.toString()
+            ?? 'Tidak diketahui',
+      );
+
+      // Buka halaman detail laporan asli.
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => DetailLaporanPage(
+            laporan: laporan,
+          ),
+        ),
+      );
+
+      if (mounted) {
+        await _muatNotifikasi();
+      }
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Gagal membuka detail laporan: $e'),
+        ),
+      );
+    }
   }
 
   @override
@@ -217,70 +320,56 @@ class _NotifikasiMahasiswaState extends State<NotifikasiMahasiswa> {
               ),
             ),
 
-            // DAFTAR NOTIFIKASI
+            // DAFTAR NOTIFIKASI           
             Expanded(
-              child: _notifikasiTampil.isEmpty
+              child: _memuat
                   ? const Center(
-                      child: Text(
-                        'Tidak ada notifikasi belum dibaca.',
-                        style: TextStyle(
-                          color: Color(0xFF718096),
-                          fontSize: 13,
-                        ),
-                      ),
+                      child: CircularProgressIndicator(),
                     )
-                  : ListView.builder(
-                      padding: const EdgeInsets.fromLTRB(16, 2, 16, 16),
-                      itemCount: _notifikasiTampil.length,
-                      itemBuilder: (context, index) {
-                        final item = _notifikasiTampil[index];
-                        return _buatKartuNotifikasi(item);
-                      },
-                    ),
-            ),
+                  : _error != null
+                      ? Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(20),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Text('Gagal memuat notifikasi.'),
+                                const SizedBox(height: 8),
+                                TextButton(
+                                  onPressed: _muatNotifikasi,
+                                  child: const Text('Coba Lagi'),
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                      : _notifikasiTampil.isEmpty
+                          ? const Center(
+                              child: Text(
+                                'Tidak ada notifikasi.',
+                                style: TextStyle(
+                                  color: Color(0xFF718096),
+                                  fontSize: 13,
+                                ),
+                              ),
+                            )
+                          : RefreshIndicator(
+                              onRefresh: _muatNotifikasi,
+                              child: ListView.builder(
+                                physics:
+                                    const AlwaysScrollableScrollPhysics(),
+                                padding: const EdgeInsets.fromLTRB(
+                                  16, 2, 16, 16,
+                                ),
+                                itemCount: _notifikasiTampil.length,
+                                itemBuilder: (context, index) {
+                                  final item = _notifikasiTampil[index];
+                                  return _buatKartuNotifikasi(item);
+                                },
+                              ),
+                            ),
+            )
           ],
-        ),
-      ),
-
-      // NAVIGASI BAWAH
-      bottomNavigationBar: Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          border: Border(
-            top: BorderSide(color: Color(0xFFE9EDF4)),
-          ),
-        ),
-        child: SafeArea(
-          top: false,
-          child: SizedBox(
-            height: 65,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _itemNavigasi(
-                  ikon: Icons.home_outlined,
-                  judul: 'Beranda',
-                  halaman: 0,
-                ),
-                _itemNavigasi(
-                  ikon: Icons.history,
-                  judul: 'Riwayat',
-                  halaman: 1,
-                ),
-                _itemNavigasi(
-                  ikon: Icons.add_circle,
-                  judul: 'Buat Laporan',
-                  halaman: 2,
-                  utama: true,
-                ),
-                _itemNavigasi(
-                  ikon: Icons.person_outline,
-                  judul: 'Profil',
-                  halaman: 3,
-                ),
-              ],
-            ),
-          ),
         ),
       ),
     );
@@ -565,473 +654,6 @@ class _NotifikasiMahasiswaState extends State<NotifikasiMahasiswa> {
   }
 }
 
-// HALAMAN DETAIL LAPORAN
-class DetailLaporanPage extends StatelessWidget {
-  final Map<String, dynamic> item;
 
-  const DetailLaporanPage({
-    super.key,
-    required this.item,
-  });
 
-  @override
-  Widget build(BuildContext context) {
-    const biru = Color(0xFF2463FF);
-
-    final String judul = item['judul'] ?? 'Detail Laporan';
-    final String kode = item['kode'] ?? '-';
-    final String pesan = item['pesan'] ?? '-';
-    final String lokasi = item['lokasi'] ?? 'Fasilitas Kampus III';
-    final String kategori = item['kategori'] ?? 'Fasilitas';
-    final String deskripsi = item['deskripsi'] ?? pesan;
-
-    final bool selesai = judul.toLowerCase().contains('selesai');
-    final bool diproses = judul.toLowerCase().contains('diproses');
-    final bool diverifikasi = judul.toLowerCase().contains('diverifikasi');
-    final bool berhasilDikirim =
-        judul.toLowerCase().contains('berhasil dikirim');
-
-    final int tahap = selesai
-        ? 3
-        : diproses
-            ? 2
-            : diverifikasi
-                ? 1
-                : 0;
-
-    final String status = selesai
-        ? 'Selesai'
-        : diproses
-            ? 'Diproses'
-            : diverifikasi
-                ? 'Diverifikasi'
-                : 'Diajukan';
-
-    final Color warnaStatus = selesai
-        ? const Color(0xFF059669)
-        : diproses
-            ? const Color(0xFFAD39E8)
-            : diverifikasi
-                ? const Color(0xFFCF7900)
-                : biru;
-
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        child: Column(
-          children: [
-            // HEADER DETAIL
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 18,
-                vertical: 14,
-              ),
-              child: Row(
-                children: [
-                  IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.arrow_back),
-                    style: IconButton.styleFrom(
-                      backgroundColor: const Color(0xFFF5F7FB),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Detail Laporan',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF111827),
-                          ),
-                        ),
-                        Text(
-                          kode,
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: biru,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: warnaStatus.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      status,
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        color: warnaStatus,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            const Divider(height: 1, color: Color(0xFFE9EDF4)),
-
-            // KONTEN DETAIL BISA DI-SCROLL
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.all(18),
-                children: [
-                  // PROGRES PENANGANAN
-                  Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF8FAFD),
-                      border: Border.all(
-                        color: const Color(0xFFE1E7F0),
-                      ),
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'PROGRES PENANGANAN FASILITAS',
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF718096),
-                          ),
-                        ),
-                        const SizedBox(height: 18),
-                        Row(
-                          children: List.generate(4, (index) {
-                            const tahapNama = [
-                              'Diajukan',
-                              'Diverifikasi',
-                              'Diproses',
-                              'Selesai',
-                            ];
-
-                            final bool sudahLewat = index <= tahap;
-
-                            return Expanded(
-                              child: Column(
-                                children: [
-                                  Container(
-                                    width: 30,
-                                    height: 30,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: sudahLewat
-                                          ? warnaStatus
-                                          : const Color(0xFFE1E7F0),
-                                    ),
-                                    child: Center(
-                                      child: Text(
-                                        '${index + 1}',
-                                        style: TextStyle(
-                                          color: sudahLewat
-                                              ? Colors.white
-                                              : const Color(0xFF718096),
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 11,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 7),
-                                  Text(
-                                    tahapNama[index],
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      fontSize: 9,
-                                      color: sudahLewat
-                                          ? warnaStatus
-                                          : const Color(0xFF718096),
-                                      fontWeight: sudahLewat
-                                          ? FontWeight.bold
-                                          : FontWeight.normal,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          }),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 22),
-
-                  Text(
-                    selesai
-                        ? 'Permasalahan Fasilitas Selesai Ditangani'
-                        : diproses
-                            ? 'Laporan Sedang Diproses'
-                            : diverifikasi
-                                ? 'Laporan Telah Diverifikasi'
-                                : berhasilDikirim
-                                    ? 'Laporan Berhasil Dikirim'
-                                    : 'Laporan Menunggu Penanganan',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF111827),
-                    ),
-                  ),
-
-                  const SizedBox(height: 10),
-
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      _labelDetail(Icons.sell_outlined, kategori),
-                      _labelDetail(Icons.location_on_outlined, lokasi),
-                    ],
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // DESKRIPSI PERMASALAHAN
-                  Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF8FAFD),
-                      border: Border.all(
-                        color: const Color(0xFFE1E7F0),
-                      ),
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Deskripsi Permasalahan:',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF374151),
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        Text(
-                          deskripsi,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            height: 1.6,
-                            color: Color(0xFF526078),
-                          ),
-                        ),
-                        const Divider(height: 24),
-                        Text(
-                          'Dilaporkan: ${item['waktu'] ?? '-'}',
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: Color(0xFF718096),
-                          ),
-                        ),
-                        const SizedBox(height: 5),
-                        Text(
-                          'Kode laporan: $kode',
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: Color(0xFF718096),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 22),
-
-                  const Text(
-                    'Foto Bukti Kerusakan:',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF374151),
-                    ),
-                  ),
-
-                  const SizedBox(height: 10),
-
-                  // FOTO CONTOH, BUKAN FOTO ASLI DARI DATABASE
-                  Container(
-                    height: 135,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF202C42),
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: const Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.image_outlined,
-                          size: 38,
-                          color: Colors.white70,
-                        ),
-                        SizedBox(height: 8),
-                        Text(
-                          'FOTO BUKTI LAPORAN',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 11,
-                          ),
-                        ),
-                        SizedBox(height: 4),
-                        Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 12),
-                          child: Text(
-                            'Foto asli akan ditampilkan setelah terhubung ke data laporan.',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: Colors.white70,
-                              fontSize: 9,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  // STATUS TINDAK LANJUT
-                  Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF0F6FF),
-                      border: Border.all(
-                        color: const Color(0xFFCEE0FF),
-                      ),
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Icon(
-                          Icons.info_outline,
-                          color: biru,
-                          size: 22,
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                selesai
-                                    ? 'Laporan telah selesai'
-                                    : 'Status penanganan: $status',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 12,
-                                  color: Color(0xFF26334D),
-                                ),
-                              ),
-                              const SizedBox(height: 5),
-                              Text(
-                                selesai
-                                    ? 'Permasalahan dinyatakan selesai berdasarkan status laporan.'
-                                    : 'Informasi petugas dan disposisi akan tersedia setelah data penugasan terhubung.',
-                                style: const TextStyle(
-                                  fontSize: 11,
-                                  height: 1.5,
-                                  color: Color(0xFF526078),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // TIMELINE MONITORING
-                  SizedBox(
-                    height: 50,
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        showDialog<void>(
-                          context: context,
-                          builder: (dialogContext) => AlertDialog(
-                            title: const Text('Timeline Monitoring'),
-                            content: Text(
-                              'Status laporan saat ini: $status.\n\n'
-                              'Riwayat waktu perubahan status akan tersedia '
-                              'setelah data laporan terhubung ke database.',
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.pop(dialogContext),
-                                child: const Text('Tutup'),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                      icon: const Icon(Icons.monitor_heart_outlined),
-                      label: const Text('Lihat Timeline Monitoring'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: biru,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 20),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  static Widget _labelDetail(IconData ikon, String teks) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 10,
-        vertical: 7,
-      ),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF0F5FF),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            ikon,
-            size: 14,
-            color: const Color(0xFF2463FF),
-          ),
-          const SizedBox(width: 5),
-          Text(
-            teks,
-            style: const TextStyle(
-              fontSize: 11,
-              color: Color(0xFF374151),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
+  

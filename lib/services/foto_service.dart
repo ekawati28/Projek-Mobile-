@@ -47,4 +47,31 @@ class FotoService {
         .from('foto-laporan')
         .getPublicUrl(pathFoto);
   }
+  
+  Future<String?> getFotoUrlByLaporan(int idLaporan) async {
+    final data = await supabase
+        .from('foto')
+        .select('path_foto')
+        .eq('id_laporan', idLaporan)
+        .maybeSingle();
+
+    if (data == null) {
+      return null;
+    }
+
+    final pathFoto = data['path_foto']?.toString();
+
+    if (pathFoto == null || pathFoto.isEmpty) {
+      return null;
+    }
+
+    // Buat URL sementara yang bisa mengakses file privat.
+    final signedUrl = await supabase
+        .storage
+        .from('foto-laporan')
+        .createSignedUrl(pathFoto, 3600);
+
+    return signedUrl;
+  }
+
 }

@@ -4,6 +4,10 @@ import 'package:flutter/material.dart';
 import '../../widgets/bottom_navbar.dart';
 import 'buat_laporan_page.dart';
 import 'detail_laporan_page.dart';
+import 'profile_page.dart';
+import 'riwayat_laporan_page.dart';
+import 'notifikasi_mahasiswa.dart' hide DetailLaporanPage;
+import '../../services/notifikasi_service.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({Key? key}) : super(key: key);
@@ -14,13 +18,19 @@ class DashboardPage extends StatefulWidget {
 
 class _DashboardPageState extends State<DashboardPage> {
   final DashboardService dashboardService = DashboardService();
+  final NotifikasiService notifikasiService = NotifikasiService();
 
   late Future<DashboardModel> dashboardFuture;
+  late Future<int> jumlahNotifikasiFuture;
+
 
   @override
   void initState() {
     super.initState();
+
     dashboardFuture = dashboardService.getDashboard();
+    jumlahNotifikasiFuture =
+        notifikasiService.getJumlahBelumDibaca();
   }
 
   String formatTanggal(DateTime tanggal) {
@@ -31,21 +41,48 @@ class _DashboardPageState extends State<DashboardPage> {
 
     return '${tanggal.day} ${bulan[tanggal.month - 1]} ${tanggal.year}';
   }
-
+  
+  
   Future<void> handleBottomNavigation(int index) async {
     switch (index) {
       case 0:
+        // Dashboard adalah halaman utama.
         break;
 
       case 1:
-        // Halaman Riwayat, nanti dihubungkan.
+        await Navigator.push<void>(
+          context,
+          MaterialPageRoute<void>(
+            builder: (context) => RiwayatLaporanScreen(
+              onNavTap: (selectedIndex) {
+                if (selectedIndex == 1) return;
+
+                Navigator.pop(context);
+                handleBottomNavigation(selectedIndex);
+              },
+            ),
+          ),
+        );
+
+        if (!mounted) return;
+
+        setState(() {
+          dashboardFuture = dashboardService.getDashboard();
+        });
         break;
 
       case 2:
         final laporanBerhasil = await Navigator.push<bool>(
           context,
           MaterialPageRoute<bool>(
-            builder: (context) => const BuatLaporanScreen(),
+            builder: (context) => BuatLaporanScreen(
+              onNavTap: (selectedIndex) {
+                if (selectedIndex == 2) return;
+
+                Navigator.pop(context);
+                handleBottomNavigation(selectedIndex);
+              },
+            ),
           ),
         );
 
@@ -59,7 +96,25 @@ class _DashboardPageState extends State<DashboardPage> {
         break;
 
       case 3:
-        // Halaman Profil, nanti dihubungkan.
+        await Navigator.push<void>(
+          context,
+          MaterialPageRoute<void>(
+            builder: (context) => ProfilePage(
+              onNavTap: (selectedIndex) {
+                if (selectedIndex == 3) return;
+
+                Navigator.pop(context);
+                handleBottomNavigation(selectedIndex);
+              },
+            ),
+          ),
+        );
+
+        if (!mounted) return;
+
+        setState(() {
+          dashboardFuture = dashboardService.getDashboard();
+        });
         break;
     }
   }
@@ -138,43 +193,76 @@ class _DashboardPageState extends State<DashboardPage> {
                           ),
                         ],
                       ),
-                      Stack(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: Colors.grey.shade300,
-                                width: 1,
-                              ),
+                      
+                      InkWell(
+                        onTap: () async {
+                          await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const NotifikasiMahasiswa(),
                             ),
-                            child: const Icon(
-                              Icons.notifications_outlined,
-                              color: Colors.black87,
-                              size: 22,
-                            ),
-                          ),
-                          Positioned(
-                            right: 2,
-                            top: 2,
-                            child: Container(
-                              padding: const EdgeInsets.all(5),
-                              decoration: const BoxDecoration(
-                                color: Color(0xFFEF4444),
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Text(
-                                '2',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
+                          );
+
+                          if (!mounted) return;
+
+                          setState(() {
+                            jumlahNotifikasiFuture =
+                                notifikasiService.getJumlahBelumDibaca();
+                          });
+                        },
+                        borderRadius: BorderRadius.circular(30),
+                        child: FutureBuilder<int>(
+                          future: jumlahNotifikasiFuture,
+                          builder: (context, snapshot) {
+                            final jumlah = snapshot.data ?? 0;
+
+                            return Stack(
+                              clipBehavior: Clip.none,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: Colors.grey.shade300,
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: const Icon(
+                                    Icons.notifications_outlined,
+                                    color: Colors.black87,
+                                    size: 22,
+                                  ),
                                 ),
-                              ),
-                            ),
-                          ),
-                        ],
+                                if (jumlah > 0)
+                                  Positioned(
+                                    right: -3,
+                                    top: -3,
+                                    child: Container(
+                                      constraints: const BoxConstraints(
+                                        minWidth: 19,
+                                        minHeight: 19,
+                                      ),
+                                      padding: const EdgeInsets.all(4),
+                                      decoration: const BoxDecoration(
+                                        color: Color(0xFFEF4444),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Text(
+                                        jumlah > 99 ? '99+' : '$jumlah',
+                                        textAlign: TextAlign.center,
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            );
+                          },
+                        ),
                       ),
                     ],
                   ),
@@ -230,7 +318,9 @@ class _DashboardPageState extends State<DashboardPage> {
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton(
-                            onPressed: () {},
+                            onPressed: () {
+                              handleBottomNavigation(2);
+                            },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.white,
                               foregroundColor: const Color(0xFF1D5EF8),
@@ -264,10 +354,11 @@ class _DashboardPageState extends State<DashboardPage> {
                   const SizedBox(height: 24),
 
                   // Header Status Laporan Saya
+                  
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: const [
-                      Text(
+                    children: [
+                      const Text(
                         'Status Laporan Saya',
                         style: TextStyle(
                           fontSize: 16,
@@ -275,16 +366,29 @@ class _DashboardPageState extends State<DashboardPage> {
                           color: Colors.black87,
                         ),
                       ),
-                      Text(
-                        'Lihat Detail',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF1D5EF8),
+                      InkWell(
+                        onTap: () {
+                          handleBottomNavigation(1);
+                        },
+                        borderRadius: BorderRadius.circular(8),
+                        child: const Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 4,
+                            vertical: 6,
+                          ),
+                          child: Text(
+                            'Lihat Detail',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF1D5EF8),
+                            ),
+                          ),
                         ),
                       ),
                     ],
                   ),
+
                   const SizedBox(height: 14),
 
                   // Status Cards (2 1 1 2)

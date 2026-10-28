@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'timeline_monitoring_page.dart';
 import '../../models/laporan_model.dart';
 import '../../services/laporan_service.dart';
+import '../../services/foto_service.dart';
 
 
 class DetailLaporanPage extends StatefulWidget {
@@ -207,19 +208,55 @@ class _DetailLaporanPageState extends State<DetailLaporanPage> {
                   ),
                 ),
                 const SizedBox(height: 10),
+                
+                FutureBuilder<String?>(
+                  future: FotoService().getFotoUrlByLaporan(
+                    widget.laporan.idLaporan,
+                  ),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState ==
+                        ConnectionState.waiting) {
+                      return Container(
+                        width: double.infinity,
+                        height: 160,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF8FAFD),
+                          borderRadius: BorderRadius.circular(13),
+                          border: Border.all(color: garis),
+                        ),
+                        child: const CircularProgressIndicator(),
+                      );
+                    }
 
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF8FAFD),
-                    borderRadius: BorderRadius.circular(13),
-                    border: Border.all(color: garis),
-                  ),
-                  child: const Text(
-                    'Foto bukti belum dihubungkan.',
-                    textAlign: TextAlign.center,
-                  ),
+                    if (snapshot.hasError) {
+                      return const Text('Gagal memuat foto laporan.');
+                    }
+
+                    final fotoUrl = snapshot.data;
+
+                    if (fotoUrl == null || fotoUrl.isEmpty) {
+                      return const Text('Belum ada foto laporan.');
+                    }
+
+                    return ClipRRect(
+                      borderRadius: BorderRadius.circular(13),
+                      child: Image.network(
+                        fotoUrl,
+                        width: double.infinity,
+                        height: 220,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return const SizedBox(
+                            height: 160,
+                            child: Center(
+                              child: Text('Foto tidak dapat ditampilkan.'),
+                            ),
+                          );
+                        },
+                      ),
+                    );
+                  },
                 ),
 
                 const SizedBox(height: 16),
@@ -542,14 +579,20 @@ class _DetailLaporanPageState extends State<DetailLaporanPage> {
           Container(
             padding: const EdgeInsets.all(7),
             decoration: BoxDecoration(
-              color: const Color(0xFFFFF2C9),
+              color: sudahDitugaskan
+                ? const Color(0xFFD1FAE5)
+                : const Color(0xFFFFF2C9),
               borderRadius: BorderRadius.circular(6),
             ),
-            child: const Text(
-              'Menunggu\nPenugasan',
+            child: Text(
+              sudahDitugaskan
+                  ? 'Ditugaskan'
+                  : 'Menunggu\nPenugasan',
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: Color(0xFFAD7400),
+                color: sudahDitugaskan
+                    ? const Color(0xFF059669)
+                    : const Color(0xFFAD7400),
                 fontSize: 9,
               ),
             ),
