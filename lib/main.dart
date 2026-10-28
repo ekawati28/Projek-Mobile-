@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'views/mahasiswa/notifikasi_mahasiswa.dart';
+import 'views/admin/profil_administrator.dart';
 
 void main() {
   runApp(const CampusReportApp());
@@ -20,7 +20,7 @@ class CampusReportApp extends StatelessWidget {
           seedColor: const Color(0xFF2563EB),
         ),
       ),
-      home: const NotifikasiMahasiswa(),
+      home: const ProfilAdministrator(),
     );
   }
 }
