@@ -1,4 +1,4 @@
-
+import 'package:campusreport/views/admin/petugas_page.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -55,7 +55,7 @@ class CampusReportApp extends StatelessWidget {
           seedColor: const Color(0xFF2563EB),
         ),
       ),
-      home: const SplashPage(),
+      home: const PetugasPage(),
     );
   }
 }
