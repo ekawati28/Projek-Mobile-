@@ -1,5 +1,14 @@
 import 'package:flutter/material.dart';
 import '../../services/laporan_service.dart';
+import '../../widgets/bottom_navbar.dart';
+import 'riwayat_laporan_page.dart';
+import 'profile_page.dart';
+import '../../models/laporan_model.dart';
+import 'detail_laporan_page.dart';
+import 'dart:typed_data';
+import 'package:image_picker/image_picker.dart';
+import '../../services/submit_laporan_service.dart';
+import 'package:camera/camera.dart';
 
 void main() {
   runApp(const MyApp());
@@ -27,7 +36,12 @@ class MyApp extends StatelessWidget {
 // SCREEN 1: BUAT LAPORAN
 // ============================================================
 class BuatLaporanScreen extends StatefulWidget {
-  const BuatLaporanScreen({super.key});
+  final ValueChanged<int>? onNavTap;
+
+  const BuatLaporanScreen({
+    super.key,
+    this.onNavTap,
+  });
 
   @override
   State<BuatLaporanScreen> createState() => _BuatLaporanScreenState();
@@ -42,43 +56,22 @@ class _BuatLaporanScreenState extends State<BuatLaporanScreen> {
   final TextEditingController _deskripsiController = TextEditingController();
   int _currentIndex = 2;
 
+  void _handleNavTap(int index) {
+    widget.onNavTap?.call(index);
+  }
+  
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              child: IndexedStack(
-                index: _currentIndex,
-                children: [
-                  _buildBerandaContent(),
-                  _buildRiwayatContent(),
-                  _buildBuatLaporanContent(),
-                  _buildProfilContent(),
-                ],
-              ),
-            ),
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                border: Border(top: BorderSide(color: Colors.grey[200]!, width: 1)),
-              ),
-              child: SafeArea(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _buildNavItem(Icons.home_outlined, 'Beranda', 0),
-                    _buildNavItem(Icons.history_outlined, 'Riwayat', 1),
-                    _buildNavCenterItem(),
-                    _buildNavItem(Icons.person_outline, 'Profil', 3),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
+        child: _buildBuatLaporanContent(),
+      ),
+      bottomNavigationBar: BottomNavBar(
+        currentIndex: 2,
+        onTap: (index) {
+          widget.onNavTap?.call(index);
+        },
       ),
     );
   }
@@ -333,7 +326,7 @@ class _BuatLaporanScreenState extends State<BuatLaporanScreen> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 elevation: 4, shadowColor: const Color(0xFF2563EB).withOpacity(0.3),
               ),
-              child: const Text('Lanjutkan ke Deskripsi & Foto', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              child: const Text('Lanjutkan Upload Foto', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             ),
           ),
           const SizedBox(height: 16),
@@ -749,6 +742,16 @@ class _DeskripsiFotoScreenState extends State<DeskripsiFotoScreen> {
       return;
     }
 
+    if (fotoBytes == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Silakan lampirkan foto kerusakan.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     setState(() {
       isLoading = true;
     });
@@ -757,11 +760,13 @@ class _DeskripsiFotoScreenState extends State<DeskripsiFotoScreen> {
       final idKategori =
           await laporanService.getIdKategori(widget.kategori);
 
-      final idLaporan = await laporanService.buatLaporan(
+      final idLaporan = await submitLaporanService.submit(
         judul: judul,
         idKategori: idKategori,
         lokasi: widget.lokasi,
         deskripsi: deskripsi,
+        foto: fotoBytes!,
+        namaFile: fotoName ?? 'foto_laporan.jpg',
       );
 
       if (!mounted) return;
@@ -771,6 +776,7 @@ class _DeskripsiFotoScreenState extends State<DeskripsiFotoScreen> {
         context,
         MaterialPageRoute<bool>(
           builder: (context) => LaporanBerhasilScreen(
+            idLaporan: idLaporan,
             nomorTiket: '#CR-$idLaporan',
             kategori: widget.kategori,
             lokasi: widget.lokasi,
@@ -815,13 +821,29 @@ class _DeskripsiFotoScreenState extends State<DeskripsiFotoScreen> {
     );
   }
   
+  
   bool fotoUploaded = false;
+  Uint8List? fotoBytes;
   String? fotoName;
+  ImageSource? sumberFotoTerpilih;
   String? fotoSize;
   String? fotoTimestamp;
 
+  final ImagePicker _imagePicker = ImagePicker();
+  CameraController? _cameraController;
+  bool _kameraSiap = false;
+  bool _sedangMengambilFoto = false;
+  final SubmitLaporanService submitLaporanService =
+      SubmitLaporanService();
+
   @override
   Widget build(BuildContext context) {
+    final bool kameraTerpilih =
+        sumberFotoTerpilih == ImageSource.camera;
+
+    final bool galeriTerpilih =
+        sumberFotoTerpilih == ImageSource.gallery;
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -990,10 +1012,17 @@ class _DeskripsiFotoScreenState extends State<DeskripsiFotoScreen> {
                               height: 56,
                               padding: const EdgeInsets.symmetric(horizontal: 12),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFEFF6FF),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: const Color(0xFFBFDBFE), width: 1),
+                              color: kameraTerpilih
+                                  ? const Color(0xFFEFF6FF)
+                                  : const Color(0xFFF9FAFB),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: kameraTerpilih
+                                    ? const Color(0xFF2563EB)
+                                    : const Color(0xFFE5E7EB),
+                                width: kameraTerpilih ? 2 : 1,
                               ),
+                            ),
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
@@ -1019,10 +1048,17 @@ class _DeskripsiFotoScreenState extends State<DeskripsiFotoScreen> {
                               height: 56,
                               padding: const EdgeInsets.symmetric(horizontal: 12),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFF9FAFB),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: const Color(0xFFE5E7EB), width: 1),
+                              color: galeriTerpilih
+                                  ? const Color(0xFFEFF6FF)
+                                  : const Color(0xFFF9FAFB),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: galeriTerpilih
+                                    ? const Color(0xFF2563EB)
+                                    : const Color(0xFFE5E7EB),
+                                width: galeriTerpilih ? 2 : 1,
                               ),
+                            ),
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
@@ -1055,33 +1091,13 @@ class _DeskripsiFotoScreenState extends State<DeskripsiFotoScreen> {
                         ),
                         child: Stack(
                           children: [
-                            Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Container(
-                                    width: 120, height: 80,
-                                    decoration: BoxDecoration(color: const Color(0xFF334155), borderRadius: BorderRadius.circular(8)),
-                                    child: Stack(
-                                      children: [
-                                        Positioned(
-                                          left: 16, top: 16,
-                                          child: Container(width: 10, height: 10, decoration: const BoxDecoration(color: Color(0xFFEF4444), shape: BoxShape.circle)),
-                                        ),
-                                        Positioned(
-                                          right: 16, top: 20, bottom: 20, left: 40,
-                                          child: Container(decoration: BoxDecoration(color: const Color(0xFF475569), borderRadius: BorderRadius.circular(4))),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const SizedBox(height: 16),
-                                  const Text('FOTO BUKTI: AC LAP RPL', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 0.5)),
-                                  const SizedBox(height: 4),
-                                  Text('$fotoName • $fotoSize', style: TextStyle(fontSize: 12, color: Colors.white.withOpacity(0.7))),
-                                  const SizedBox(height: 4),
-                                  Text(fotoTimestamp ?? '', style: TextStyle(fontSize: 11, color: Colors.white.withOpacity(0.5))),
-                                ],
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: Image.memory(
+                                fotoBytes!,
+                                width: double.infinity,
+                                height: 200,
+                                fit: BoxFit.cover,
                               ),
                             ),
 
@@ -1113,6 +1129,7 @@ class _DeskripsiFotoScreenState extends State<DeskripsiFotoScreen> {
                                 onTap: () {
                                   setState(() {
                                     fotoUploaded = false;
+                                    fotoBytes = null;
                                     fotoName = null;
                                     fotoSize = null;
                                     fotoTimestamp = null;
@@ -1181,25 +1198,195 @@ class _DeskripsiFotoScreenState extends State<DeskripsiFotoScreen> {
       ),
     );
   }
+  
+  Future<void> _ambilFoto() async {
+    if (_sedangMengambilFoto) return;
 
-  void _ambilFoto() {
     setState(() {
-      fotoUploaded = true;
-      fotoName = 'IMG_20261019_083210.jpg';
-      fotoSize = '2.4 MB';
-      fotoTimestamp = '19/10/2026 08:32 WIT';
+      _sedangMengambilFoto = true;
     });
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Foto berhasil diambil dari kamera'), backgroundColor: Color(0xFF10B981), duration: Duration(seconds: 1)));
+
+    CameraController? controller;
+
+    try {
+      final cameras = await availableCameras();
+      debugPrint('Daftar kamera: $cameras');
+
+      if (cameras.isEmpty) {
+        throw Exception('Kamera tidak ditemukan.');
+      }
+
+      // Gunakan kamera yang terdeteksi oleh perangkat.
+      final kamera = cameras.first;
+
+      controller = CameraController(
+        kamera,
+        ResolutionPreset.medium,
+        enableAudio: false,
+      );
+
+      await controller.initialize();
+
+      if (!mounted) return;
+
+      _cameraController = controller;
+      _kameraSiap = true;
+
+      final hasil = await Navigator.push<XFile>(
+        context,
+        MaterialPageRoute<XFile>(
+          builder: (cameraContext) => Scaffold(
+            appBar: AppBar(
+              title: const Text('Ambil Foto'),
+            ),
+            body: Column(
+              children: [
+                Expanded(
+                  child: Center(
+                    child: CameraPreview(controller!),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: ElevatedButton.icon(
+                    onPressed: () async {
+                      try {
+                        if (!controller!.value.isInitialized ||
+                            controller.value.isTakingPicture) {
+                          return;
+                        }
+
+                        final foto =
+                            await controller.takePicture();
+
+                        if (cameraContext.mounted) {
+                          Navigator.pop(cameraContext, foto);
+                        }
+                      } catch (e) {
+                        debugPrint('Gagal mengambil foto: $e');
+
+                        if (cameraContext.mounted) {
+                          ScaffoldMessenger.of(cameraContext)
+                              .showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                'Gagal mengambil foto: $e',
+                              ),
+                            ),
+                          );
+                        }
+                      }
+                    },
+                    icon: const Icon(Icons.camera_alt),
+                    label: const Text('Ambil Foto'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      if (hasil == null || !mounted) return;
+
+      final bytes = await hasil.readAsBytes();
+
+      if (bytes.length > 5 * 1024 * 1024) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Ukuran foto maksimal 5 MB.'),
+          ),
+        );
+        return;
+      }
+
+      setState(() {
+        fotoBytes = bytes;
+        fotoUploaded = true;
+        sumberFotoTerpilih = ImageSource.camera;
+        fotoName = hasil.name;
+        fotoSize =
+            '${(bytes.lengthInBytes / (1024 * 1024)).toStringAsFixed(2)} MB';
+        fotoTimestamp =
+            DateTime.now().toString().substring(0, 16);
+      });
+    } catch (e, stackTrace) {
+      debugPrint('Gagal membuka kamera: $e');
+      debugPrintStack(stackTrace: stackTrace);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Kamera gagal dibuka: $e'),
+          ),
+        );
+      }
+    } finally {
+      await controller?.dispose();
+
+      if (identical(_cameraController, controller)) {
+        _cameraController = null;
+      }
+
+      if (mounted) {
+        setState(() {
+          _kameraSiap = false;
+          _sedangMengambilFoto = false;
+        });
+      }
+    }
   }
 
-  void _pilihDariGaleri() {
-    setState(() {
-      fotoUploaded = true;
-      fotoName = 'IMG_20261019_083210.jpg';
-      fotoSize = '2.4 MB';
-      fotoTimestamp = '19/10/2026 08:32 WIT';
-    });
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Foto berhasil dipilih dari galeri'), backgroundColor: Color(0xFF10B981), duration: Duration(seconds: 1)));
+  Future<void> _pilihDariGaleri() async {
+    await _pilihFoto(ImageSource.gallery);
+  }
+
+  Future<void> _pilihFoto(ImageSource source) async {
+    try {
+      final XFile? hasil = await _imagePicker.pickImage(
+        source: source,
+        imageQuality: 85,
+      );
+
+      if (hasil == null) return;
+
+      final bytes = await hasil.readAsBytes();
+
+      if (bytes.length > 5 * 1024 * 1024) {
+        if (!mounted) return;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Ukuran foto maksimal 5 MB.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      if (!mounted) return;
+
+      setState(() {
+        fotoBytes = bytes;
+        fotoUploaded = true;
+        sumberFotoTerpilih = source;
+        fotoName = hasil.name;
+        fotoSize =
+            '${(bytes.lengthInBytes / (1024 * 1024)).toStringAsFixed(2)} MB';
+        fotoTimestamp = DateTime.now().toString().substring(0, 16);
+      });
+    } catch (e) {
+      debugPrint('Gagal memilih foto: $e');
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Gagal mengambil foto. Silakan coba lagi.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   @override
@@ -1213,6 +1400,7 @@ class _DeskripsiFotoScreenState extends State<DeskripsiFotoScreen> {
 // SCREEN 5: LAPORAN BERHASIL DIKIRIM (DESAIN BARU DITAMBAHKAN DI SINI)
 // ============================================================
 class LaporanBerhasilScreen extends StatelessWidget {
+  final int idLaporan;
   final String nomorTiket;
   final String kategori;
   final String lokasi;
@@ -1220,6 +1408,7 @@ class LaporanBerhasilScreen extends StatelessWidget {
 
   const LaporanBerhasilScreen({
     super.key,
+    required this.idLaporan,
     required this.nomorTiket,
     required this.kategori,
     required this.lokasi,
@@ -1445,13 +1634,50 @@ class LaporanBerhasilScreen extends StatelessWidget {
                 width: double.infinity,
                 height: 52,
                 child: ElevatedButton(
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Fitur detail laporan akan segera hadir'),
-                        backgroundColor: Color(0xFF2563EB),
-                      ),
-                    );
+                  onPressed: () async {
+                    try {
+                      final data = await LaporanService()
+                          .getDetailLaporan(idLaporan);
+
+                      if (!context.mounted) return;
+
+                      final laporan = LaporanModel(
+                        idLaporan: idLaporan,
+                        lokasi: data['lokasi']?.toString() ?? lokasi,
+                        deskripsi:
+                            data['lpr_deskripsi']?.toString() ?? '',
+                        status: data['status']?.toString() ?? 'Diajukan',
+                        waktuDibuat: DateTime.tryParse(
+                              data['lpr_waktu_dibuat']?.toString() ?? '',
+                            ) ??
+                            DateTime.now(),
+                        namaPelapor:
+                            data['nama_pelapor']?.toString() ??
+                                'Tidak diketahui',
+                      );
+
+                      await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => DetailLaporanPage(
+                            laporan: laporan,
+                          ),
+                        ),
+                      );
+                    } catch (e) {
+                      if (!context.mounted) return;
+
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Gagal membuka detail laporan. Silakan coba lagi.',
+                          ),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+
+                      debugPrint('Gagal membuka detail laporan: $e');
+                    }
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF2563EB),
