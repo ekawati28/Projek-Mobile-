@@ -756,4 +756,3 @@ class LaporanCard extends StatelessWidget {
     );
   }
 }
-
