@@ -2,8 +2,8 @@
 import 'package:flutter/material.dart';
 import 'timeline_monitoring_page.dart';
 import '../../models/laporan_model.dart';
-import '../../services/laporan_service.dart';
-import '../../services/foto_service.dart';
+import '../../services/mahasiswa/laporan_service.dart';
+import '../../services/mahasiswa/foto_service.dart';
 
 
 class DetailLaporanPage extends StatefulWidget {

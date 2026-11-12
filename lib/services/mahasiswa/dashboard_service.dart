@@ -1,7 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../models/dashboard_model.dart';
-import '../models/laporan_model.dart';
+import '../../models/dashboard_model.dart';
+import '../../models/laporan_model.dart';
 
 
 class DashboardService {

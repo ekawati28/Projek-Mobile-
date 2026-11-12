@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
-import '../../services/laporan_service.dart';
+import '../../services/mahasiswa/laporan_service.dart';
 import '../../widgets/bottom_navbar.dart';
 import 'riwayat_laporan_page.dart';
 import 'profile_page.dart';
 import '../../models/laporan_model.dart';
 import 'detail_laporan_page.dart';
 import 'dart:typed_data';
-import 'package:image_picker/image_picker.dart';
-import '../../services/submit_laporan_service.dart';
+import 'package:image_picker/image_picker.dart' as picker;
 import 'package:camera/camera.dart';
+import '../../services/mahasiswa/submit_laporan_service.dart';
 
 void main() {
   runApp(const MyApp());
@@ -259,7 +259,8 @@ class _BuatLaporanScreenState extends State<BuatLaporanScreen> {
           const Text('5. Lampirkan Foto Bukti *', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF111827))),
           const SizedBox(height: 12),
           GestureDetector(
-            onTap: () {}, behavior: HitTestBehavior.opaque,
+            onTap: null,
+            behavior: HitTestBehavior.opaque,
             child: Container(
               width: double.infinity, height: 160, padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(color: const Color(0xFFF9FAFB), borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFFD1D5DB), width: 1.5, style: BorderStyle.solid)),
@@ -566,7 +567,7 @@ class _PilihLokasiScreenState extends State<PilihLokasiScreen> {
   late String selectedLokasi;
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
-  final List<String> _allLokasi = ['JT1', 'JT2', 'JT3', 'JT4', 'JT5', 'JT6', 'JT7', 'JT8', 'LAB RPL', 'LAB JAR', 'Ruang Dosen', 'Aula'];
+  final List<String> _allLokasi = ['JT1', 'JT2', 'JT3', 'JT4', 'JT5', 'JT6', 'LAB RPL', 'LAB RISET', 'LAB JAK', 'PRODI', 'TU', 'RUANG SEMINAR'];
 
   List<String> get _filteredLokasi {
     if (_searchQuery.isEmpty) return _allLokasi;
@@ -825,24 +826,22 @@ class _DeskripsiFotoScreenState extends State<DeskripsiFotoScreen> {
   bool fotoUploaded = false;
   Uint8List? fotoBytes;
   String? fotoName;
-  ImageSource? sumberFotoTerpilih;
+  picker.ImageSource? sumberFotoTerpilih;
   String? fotoSize;
   String? fotoTimestamp;
 
-  final ImagePicker _imagePicker = ImagePicker();
-  CameraController? _cameraController;
-  bool _kameraSiap = false;
+  final picker.ImagePicker _imagePicker = picker.ImagePicker();
   bool _sedangMengambilFoto = false;
-  final SubmitLaporanService submitLaporanService =
-      SubmitLaporanService();
+
+  final SubmitLaporanService submitLaporanService = SubmitLaporanService();
 
   @override
   Widget build(BuildContext context) {
     final bool kameraTerpilih =
-        sumberFotoTerpilih == ImageSource.camera;
+        sumberFotoTerpilih == picker.ImageSource.camera;
 
     final bool galeriTerpilih =
-        sumberFotoTerpilih == ImageSource.gallery;
+        sumberFotoTerpilih == picker.ImageSource.gallery;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -1007,7 +1006,7 @@ class _DeskripsiFotoScreenState extends State<DeskripsiFotoScreen> {
                       children: [
                         Expanded(
                           child: GestureDetector(
-                            onTap: _ambilFoto,
+                            onTap: _sedangMengambilFoto ? null : _ambilFoto,
                             child: Container(
                               height: 56,
                               padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -1199,6 +1198,7 @@ class _DeskripsiFotoScreenState extends State<DeskripsiFotoScreen> {
     );
   }
   
+  
   Future<void> _ambilFoto() async {
     if (_sedangMengambilFoto) return;
 
@@ -1209,19 +1209,35 @@ class _DeskripsiFotoScreenState extends State<DeskripsiFotoScreen> {
     CameraController? controller;
 
     try {
+      // 1. Mendeteksi kamera laptop.
       final cameras = await availableCameras();
-      debugPrint('Daftar kamera: $cameras');
 
       if (cameras.isEmpty) {
-        throw Exception('Kamera tidak ditemukan.');
+        throw Exception('Kamera laptop tidak ditemukan.');
       }
 
-      // Gunakan kamera yang terdeteksi oleh perangkat.
-      final kamera = cameras.first;
+      debugPrint('Kamera tersedia: ${cameras.length}');
 
+      for (final camera in cameras) {
+        debugPrint(
+          'Nama kamera: ${camera.name}, '
+          'Arah: ${camera.lensDirection}',
+        );
+      }
+
+      // 2. Memilih kamera Integrated Camera jika tersedia.
+      final selectedCamera = cameras.firstWhere(
+        (camera) =>
+            camera.name.toLowerCase().contains('integrated camera'),
+        orElse: () => cameras.first,
+      );
+
+      debugPrint('Kamera dipilih: ${selectedCamera.name}');
+
+      // 3. Mengaktifkan kamera dengan resolusi rendah.
       controller = CameraController(
-        kamera,
-        ResolutionPreset.medium,
+        selectedCamera,
+        ResolutionPreset.low,
         enableAudio: false,
       );
 
@@ -1229,108 +1245,159 @@ class _DeskripsiFotoScreenState extends State<DeskripsiFotoScreen> {
 
       if (!mounted) return;
 
-      _cameraController = controller;
-      _kameraSiap = true;
+      final activeController = controller;
 
-      final hasil = await Navigator.push<XFile>(
-        context,
-        MaterialPageRoute<XFile>(
-          builder: (cameraContext) => Scaffold(
-            appBar: AppBar(
-              title: const Text('Ambil Foto'),
-            ),
-            body: Column(
-              children: [
-                Expanded(
-                  child: Center(
-                    child: CameraPreview(controller!),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: ElevatedButton.icon(
-                    onPressed: () async {
-                      try {
-                        if (!controller!.value.isInitialized ||
-                            controller.value.isTakingPicture) {
-                          return;
-                        }
+      // 4. Menampilkan kamera realtime.
+      final bytes = await showDialog<Uint8List>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) {
+          bool sedangCapture = false;
 
-                        final foto =
-                            await controller.takePicture();
+          return StatefulBuilder(
+            builder: (context, setDialogState) {
+              return Dialog(
+                insetPadding: const EdgeInsets.all(16),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        'Ambil Foto Kerusakan',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
 
-                        if (cameraContext.mounted) {
-                          Navigator.pop(cameraContext, foto);
-                        }
-                      } catch (e) {
-                        debugPrint('Gagal mengambil foto: $e');
+                      const SizedBox(height: 16),
 
-                        if (cameraContext.mounted) {
-                          ScaffoldMessenger.of(cameraContext)
-                              .showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                'Gagal mengambil foto: $e',
-                              ),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: AspectRatio(
+                          aspectRatio:
+                              activeController.value.aspectRatio,
+                          child: CameraPreview(activeController),
+                        ),
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: sedangCapture
+                                  ? null
+                                  : () {
+                                      Navigator.pop(dialogContext);
+                                    },
+                              child: const Text('Batal'),
                             ),
-                          );
-                        }
-                      }
-                    },
-                    icon: const Icon(Icons.camera_alt),
-                    label: const Text('Ambil Foto'),
+                          ),
+
+                          const SizedBox(width: 12),
+
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: sedangCapture
+                                  ? null
+                                  : () async {
+                                      setDialogState(() {
+                                        sedangCapture = true;
+                                      });
+
+                                      try {
+                                        final foto =
+                                            await activeController
+                                                .takePicture();
+
+                                        final hasil =
+                                            await foto.readAsBytes();
+
+                                        if (dialogContext.mounted) {
+                                          Navigator.pop(
+                                            dialogContext,
+                                            hasil,
+                                          );
+                                        }
+                                      } catch (e) {
+                                        debugPrint(
+                                          'Gagal mengambil foto: $e',
+                                        );
+
+                                        if (dialogContext.mounted) {
+                                          setDialogState(() {
+                                            sedangCapture = false;
+                                          });
+
+                                          ScaffoldMessenger.of(
+                                            dialogContext,
+                                          ).showSnackBar(
+                                            SnackBar(
+                                              content: Text(
+                                                'Gagal mengambil foto: $e',
+                                              ),
+                                            ),
+                                          );
+                                        }
+                                      }
+                                    },
+                              icon: const Icon(Icons.camera_alt),
+                              label: const Text('Ambil Gambar'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
-              ],
-            ),
-          ),
-        ),
+              );
+            },
+          );
+        },
       );
 
-      if (hasil == null || !mounted) return;
+      // 5. Menyimpan hasil foto.
+      if (bytes != null) {
+        if (bytes.length > 5 * 1024 * 1024) {
+          throw Exception('Ukuran foto maksimal 5 MB.');
+        }
 
-      final bytes = await hasil.readAsBytes();
+        if (!mounted) return;
 
-      if (bytes.length > 5 * 1024 * 1024) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Ukuran foto maksimal 5 MB.'),
-          ),
-        );
-        return;
+        setState(() {
+          fotoBytes = bytes;
+          fotoUploaded = true;
+          sumberFotoTerpilih = picker.ImageSource.camera;
+
+          fotoName =
+              'kamera_${DateTime.now().millisecondsSinceEpoch}.jpg';
+
+          fotoSize =
+              '${(bytes.length / (1024 * 1024)).toStringAsFixed(2)} MB';
+
+          fotoTimestamp =
+              DateTime.now().toString().substring(0, 16);
+        });
       }
-
-      setState(() {
-        fotoBytes = bytes;
-        fotoUploaded = true;
-        sumberFotoTerpilih = ImageSource.camera;
-        fotoName = hasil.name;
-        fotoSize =
-            '${(bytes.lengthInBytes / (1024 * 1024)).toStringAsFixed(2)} MB';
-        fotoTimestamp =
-            DateTime.now().toString().substring(0, 16);
-      });
-    } catch (e, stackTrace) {
+    } catch (e) {
       debugPrint('Gagal membuka kamera: $e');
-      debugPrintStack(stackTrace: stackTrace);
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Kamera gagal dibuka: $e'),
-          ),
-        );
-      }
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Kamera gagal dibuka: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
     } finally {
       await controller?.dispose();
 
-      if (identical(_cameraController, controller)) {
-        _cameraController = null;
-      }
-
       if (mounted) {
         setState(() {
-          _kameraSiap = false;
           _sedangMengambilFoto = false;
         });
       }
@@ -1338,14 +1405,16 @@ class _DeskripsiFotoScreenState extends State<DeskripsiFotoScreen> {
   }
 
   Future<void> _pilihDariGaleri() async {
-    await _pilihFoto(ImageSource.gallery);
+    await _pilihFoto(picker.ImageSource.gallery);
   }
-
-  Future<void> _pilihFoto(ImageSource source) async {
+  
+  Future<void> _pilihFoto(picker.ImageSource source) async {
     try {
-      final XFile? hasil = await _imagePicker.pickImage(
+      final picker.XFile? hasil = await _imagePicker.pickImage(
         source: source,
         imageQuality: 85,
+        maxWidth: 1920,
+        maxHeight: 1920,
       );
 
       if (hasil == null) return;
@@ -1371,18 +1440,26 @@ class _DeskripsiFotoScreenState extends State<DeskripsiFotoScreen> {
         fotoUploaded = true;
         sumberFotoTerpilih = source;
         fotoName = hasil.name;
+
         fotoSize =
-            '${(bytes.lengthInBytes / (1024 * 1024)).toStringAsFixed(2)} MB';
-        fotoTimestamp = DateTime.now().toString().substring(0, 16);
+            '${(bytes.length / (1024 * 1024)).toStringAsFixed(2)} MB';
+
+        fotoTimestamp =
+            DateTime.now().toString().substring(0, 16);
       });
+
     } catch (e) {
-      debugPrint('Gagal memilih foto: $e');
+      debugPrint('Gagal mengambil foto: $e');
 
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Gagal mengambil foto. Silakan coba lagi.'),
+        SnackBar(
+          content: Text(
+            source == picker.ImageSource.camera
+                ? 'Kamera gagal dibuka. Periksa izin kamera perangkat.'
+                : 'Gagal memilih foto dari galeri.',
+          ),
           backgroundColor: Colors.red,
         ),
       );

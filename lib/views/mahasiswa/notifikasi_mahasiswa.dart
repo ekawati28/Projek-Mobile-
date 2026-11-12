@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../services/notifikasi_service.dart';
+import '../../services/mahasiswa/notifikasi_service.dart';
 import '../../models/laporan_model.dart';
-import '../../services/laporan_service.dart';
+import '../../services/mahasiswa/laporan_service.dart';
 import 'detail_laporan_page.dart';
 
 class NotifikasiMahasiswa extends StatefulWidget {

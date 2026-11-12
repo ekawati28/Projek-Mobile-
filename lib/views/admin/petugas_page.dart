@@ -1,7 +1,10 @@
-
 import 'dart:ui';
-
 import 'package:flutter/material.dart';
+import '../../widgets/bottom_navbar_admin.dart';
+import 'dashboard_admin.dart';
+import 'laporan_admin_page.dart';
+import 'profil_administrator.dart';
+import '../../services/admin/admin_petugas_service.dart';
 
 const Color biru = Color(0xFF1743D1);
 const Color biruMuda = Color(0xFFE1EDFF);
@@ -21,48 +24,82 @@ class _PetugasPageState extends State<PetugasPage> {
   final TextEditingController pencarianController =
       TextEditingController();
 
-  final List<Map<String, dynamic>> daftarPetugas = [
-    {
-      'nama': 'Ahmad',
-      'inisial': 'AH',
-      'jabatan': 'Teknisi Fasilitas',
-      'status': 'Aktif',
-      'tugas': 1,
-      'keahlian': 'Kelistrikan, Stopkontak',
-      'kontak': '0812-3344-5566',
-      'beban': '1 Laporan Sedang Ditangani',
-    },
-    {
-      'nama': 'Budi',
-      'inisial': 'BD',
-      'jabatan': 'Teknisi Fasilitas',
-      'status': 'Aktif',
-      'tugas': 0,
-      'keahlian': 'AC & Pendingin',
-      'kontak': '0852-7788-9900',
-      'beban': 'Belum Ada Laporan',
-    },
-    {
-      'nama': 'Citra',
-      'inisial': 'CT',
-      'jabatan': 'Teknisi Fasilitas',
-      'status': 'Aktif',
-      'tugas': 2,
-      'keahlian': 'Sarana Ruang Kuliah',
-      'kontak': '0821-6677-8899',
-      'beban': '2 Laporan Sedang Ditangani',
-    },
-    {
-      'nama': 'Deni',
-      'inisial': 'DN',
-      'jabatan': 'Teknisi Fasilitas',
-      'status': 'Aktif',
-      'tugas': 1,
-      'keahlian': 'Sanitasi, Toilet & Air',
-      'kontak': '0823-1122-3344',
-      'beban': '1 Laporan Sedang Ditangani',
-    },
-  ];
+    
+  final AdminPetugasService _adminPetugasService =
+      AdminPetugasService();
+
+  List<Map<String, dynamic>> daftarPetugas = [];
+
+  bool _isLoading = true;
+  String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _muatPetugas();
+  }
+
+  Future<void> _muatPetugas() async {
+    if (mounted) {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+    }
+
+    try {
+      final data =
+          await _adminPetugasService.getDaftarPetugas();
+
+      if (!mounted) return;
+
+      setState(() {
+        daftarPetugas = data.map((item) {
+          final nama =
+              item['nama_pengguna']?.toString() ?? 'Tanpa nama';
+
+          final jumlah =
+              (item['jumlah_penugasan'] as num?)?.toInt() ?? 0;
+
+          final inisial = nama
+              .trim()
+              .split(RegExp(r'\s+'))
+              .where((kata) => kata.isNotEmpty)
+              .take(2)
+              .map((kata) => kata[0].toUpperCase())
+              .join();
+
+          return {
+            'id_pengguna': item['id_pengguna'],
+            'auth_id': item['auth_id'],
+            'nama': nama,
+            'email': item['email']?.toString() ?? '-',
+            'inisial': inisial.isEmpty ? 'P' : inisial,
+
+            'jabatan': item['jabatan']?.toString() ?? 'Belum diisi',
+            'keahlian': item['keahlian']?.toString() ?? 'Belum diisi',
+            'kontak': item['no_telepon']?.toString() ?? 'Belum diisi',
+
+            'status': 'Terdaftar',
+
+            'tugas': jumlah,
+            'beban': jumlah == 0
+                ? 'Belum ada penugasan'
+                : '$jumlah penugasan tercatat',
+          };
+        }).toList();
+
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _isLoading = false;
+        _errorMessage = e.toString();
+      });
+    }
+  }
 
   List<Map<String, dynamic>> get petugasTerfilter {
     final kata = pencarianController.text.trim().toLowerCase();
@@ -72,7 +109,7 @@ class _PetugasPageState extends State<PetugasPage> {
               .toString()
               .toLowerCase()
               .contains(kata) ||
-          petugas['keahlian']
+          petugas['email']
               .toString()
               .toLowerCase()
               .contains(kata);
@@ -84,170 +121,223 @@ class _PetugasPageState extends State<PetugasPage> {
     pencarianController.dispose();
     super.dispose();
   }
+  
+  void _navigasiAdmin(int index) {
+    if (index == 2) return;
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        child: Column(
-          children: [
-            _header(),
+    Widget halaman;
 
-            const Divider(
-              height: 1,
-              thickness: 1,
-              color: Color(0xFFF0F3F8),
-            ),
+    switch (index) {
+      case 0:
+        halaman = const DashboardAdminScreen();
+        break;
+      case 1:
+        halaman = const LaporanAdminPage();
+        break;
+      case 3:
+        halaman = const ProfilAdministrator();
+        break;
+      default:
+        return;
+    }
 
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(
-                  23, 14, 23, 16,
-                ),
-                children: [
-                  _kolomPencarian(),
-                  const SizedBox(height: 14),
-                  _bannerPenanganan(),
-                  const SizedBox(height: 14),
-
-                  if (petugasTerfilter.isEmpty)
-                    const Padding(
-                      padding: EdgeInsets.all(24),
-                      child: Center(
-                        child: Text(
-                          'Petugas tidak ditemukan.',
-                          style: TextStyle(color: abu),
-                        ),
-                      ),
-                    )
-                  else
-                    ...petugasTerfilter.map(
-                      (petugas) => Padding(
-                        padding: const EdgeInsets.only(bottom: 11),
-                        child: _kartuPetugas(petugas),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-
-            _navigasiBawah(),
-          ],
-        ),
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) => halaman,
       ),
     );
   }
 
-  // HEADER DAFTAR PETUGAS
-  Widget _header() {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(23, 17, 23, 17),
-      color: Colors.white,
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+    backgroundColor: Colors.white,
+    body: SafeArea(
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Center(
-            child: Text(
-              'Daftar Petugas',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: teks,
-              ),
-            ),
+          _header(),
+
+          const Divider(
+            height: 1,
+            thickness: 1,
+            color: Color(0xFFF0F3F8),
           ),
-          const SizedBox(height: 1),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              InkWell(
-                onTap: () {
-                  if (Navigator.canPop(context)) {
-                    Navigator.pop(context);
-                  }
-                },
-                borderRadius: BorderRadius.circular(30),
-                child: Container(
-                  width: 36,
-                  height: 36,
-                  margin: const EdgeInsets.only(
-                    top: 2, right: 13,
-                  ),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: latar,
-                    border: Border.all(color: garis),
-                  ),
-                  child: const Icon(
-                    Icons.arrow_back,
-                    size: 20,
-                    color: Color(0xFF40516D),
-                  ),
-                ),
-              ),
 
-              const Expanded(
-                child: Padding(
-                  padding: EdgeInsets.only(top: 6),
-                  child: Text(
-                    'Staf Teknisi Sarpras\n\nKampus III',
-                    style: TextStyle(
-                      color: Color(0xFF506B91),
-                      fontSize: 14,
-                      height: 1.1,
-                    ),
-                  ),
-                ),
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(
+                23, 14, 23, 16,
               ),
+              children: [
+                _kolomPencarian(),
+                const SizedBox(height: 14),
 
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 11, vertical: 7,
-                ),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF0F6FF),
-                  border: Border.all(
-                    color: const Color(0xFFBBD5FF),
-                  ),
-                  borderRadius: BorderRadius.circular(25),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(
-                      Icons.people_alt_outlined,
-                      size: 17,
-                      color: biru,
+                _bannerPenanganan(),
+                const SizedBox(height: 14),
+                
+                if (_isLoading)
+                  const Padding(
+                    padding: EdgeInsets.all(35),
+                    child: Center(
+                      child: CircularProgressIndicator(
+                        color: biru,
+                      ),
                     ),
-                    const SizedBox(width: 6),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                  )
+                else if (_errorMessage != null)
+                  Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
                       children: [
+                        const Icon(
+                          Icons.error_outline,
+                          color: Colors.red,
+                          size: 35,
+                        ),
+                        const SizedBox(height: 10),
                         Text(
-                          '${daftarPetugas.length}',
+                          'Gagal mengambil data petugas',
                           style: const TextStyle(
-                            color: biru,
-                            fontSize: 12,
-                            height: 1,
+                            color: teks,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        const Text(
-                          'Petugas',
-                          style: TextStyle(
-                            color: biru,
-                            fontSize: 12,
-                            height: 1.2,
-                            fontWeight: FontWeight.bold,
+                        const SizedBox(height: 5),
+                        Text(
+                          _errorMessage!,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: abu,
+                            fontSize: 11,
                           ),
+                        ),
+                        const SizedBox(height: 12),
+                        ElevatedButton.icon(
+                          onPressed: _muatPetugas,
+                          icon: const Icon(Icons.refresh),
+                          label: const Text('Coba Lagi'),
                         ),
                       ],
                     ),
+                  )
+                else if (petugasTerfilter.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.all(24),
+                    child: Center(
+                      child: Text(
+                        'Petugas tidak ditemukan.',
+                        style: TextStyle(color: abu),
+                      ),
+                    ),
+                  )
+                else
+                  ...petugasTerfilter.map(
+                    (petugas) => Padding(
+                      padding: const EdgeInsets.only(bottom: 11),
+                      child: _kartuPetugas(petugas),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    ),
+
+    bottomNavigationBar: BottomNavbarAdmin(
+      currentIndex: 2,
+      onTap: _navigasiAdmin,
+    ),
+  );
+  }
+  
+  // HEADER DAFTAR PETUGAS
+  Widget _header() {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(23, 20, 23, 18),
+      color: Colors.white,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          // Judul dan subtitle
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Daftar Petugas',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: teks,
+                    height: 1.2,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                const Text(
+                  'Staf Teknisi Sarpras · Kampus III',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: Color(0xFF506B91),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(width: 10),
+
+          // Jumlah petugas
+          Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 13,
+              vertical: 10,
+            ),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF0F6FF),
+              border: Border.all(
+                color: const Color(0xFFBBD5FF),
+              ),
+              borderRadius: BorderRadius.circular(25),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.people_alt_outlined,
+                  size: 19,
+                  color: biru,
+                ),
+                const SizedBox(width: 7),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      '${daftarPetugas.length}',
+                      style: const TextStyle(
+                        color: biru,
+                        fontSize: 14,
+                        height: 1,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const Text(
+                      'Petugas',
+                      style: TextStyle(
+                        color: biru,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ],
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),
@@ -281,7 +371,7 @@ class _PetugasPageState extends State<PetugasPage> {
                 color: teks,
               ),
               decoration: const InputDecoration(
-                hintText: 'Cari nama, keahlian teknisi...',
+                hintText: 'Cari nama atau email petugas...',
                 hintStyle: TextStyle(
                   color: Color(0xFF929DB0),
                   fontSize: 13,
@@ -411,7 +501,7 @@ class _PetugasPageState extends State<PetugasPage> {
                 ),
                 child: Center(
                   child: Text(
-                    petugas['inisial'],
+                    petugas['inisial']?.toString() ?? 'P',
                     style: const TextStyle(
                       color: biru,
                       fontSize: 17,
@@ -432,7 +522,7 @@ class _PetugasPageState extends State<PetugasPage> {
                       children: [
                         Flexible(
                           child: Text(
-                            petugas['nama'],
+                            petugas['nama']?.toString() ?? 'Tanpa nama',
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
                               fontSize: 14,
@@ -454,7 +544,7 @@ class _PetugasPageState extends State<PetugasPage> {
                             ),
                           ),
                           child: Text(
-                            petugas['status'],
+                            petugas['status']?.toString() ?? 'Terdaftar',
                             style: const TextStyle(
                               color: Color(0xFF009C70),
                               fontSize: 10,
@@ -465,7 +555,7 @@ class _PetugasPageState extends State<PetugasPage> {
                     ),
                     const SizedBox(height: 5),
                     Text(
-                      petugas['jabatan'],
+                      petugas['jabatan']?.toString() ?? 'Belum diisi',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
@@ -476,7 +566,7 @@ class _PetugasPageState extends State<PetugasPage> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      petugas['keahlian'],
+                      petugas['keahlian']?.toString() ?? 'Belum diisi',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
@@ -598,7 +688,7 @@ class _PetugasPageState extends State<PetugasPage> {
                           ),
                           child: Center(
                             child: Text(
-                              petugas['inisial'],
+                              petugas['inisial']?.toString() ?? 'P',
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 21,
@@ -616,7 +706,7 @@ class _PetugasPageState extends State<PetugasPage> {
                                 CrossAxisAlignment.start,
                             children: [
                               Text(
-                                petugas['nama'],
+                                petugas['nama']?.toString() ?? 'Tanpa nama',
                                 style: const TextStyle(
                                   color: teks,
                                   fontSize: 19,
@@ -625,7 +715,7 @@ class _PetugasPageState extends State<PetugasPage> {
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                petugas['jabatan'],
+                                petugas['jabatan']?.toString() ?? 'Belum diisi',
                                 style: const TextStyle(
                                   color: biru,
                                   fontSize: 13,
@@ -648,7 +738,7 @@ class _PetugasPageState extends State<PetugasPage> {
                                   ),
                                 ),
                                 child: Text(
-                                  '• Status: ${petugas['status']}',
+                                  '• Status: ${petugas['status']?.toString() ?? 'Terdaftar'}',
                                   style: const TextStyle(
                                     color: Color(0xFF009C70),
                                     fontSize: 11,
@@ -698,18 +788,24 @@ class _PetugasPageState extends State<PetugasPage> {
                       child: Column(
                         children: [
                           _barisInformasi(
-                            ikon: Icons.handyman_outlined,
-                            label: 'Bidang\nKeahlian:',
-                            isi: petugas['keahlian'],
-                          ),
+                              ikon: Icons.handyman_outlined,
+                              label: 'Bidang\nKeahlian:',
+                              isi: petugas['keahlian']?.toString() ?? 'Belum diisi',
+                            ),
                           const Divider(
                             height: 1,
                             color: Color(0xFFE6ECF4),
                           ),
+
+                          _barisInformasi(
+                            ikon: Icons.email_outlined,
+                            label: 'Email:',
+                            isi: petugas['email']?.toString() ?? 'Belum diisi',
+                          ),
                           _barisInformasi(
                             ikon: Icons.phone_outlined,
                             label: 'Kontak\nTelepon/WA:',
-                            isi: petugas['kontak'],
+                            isi: petugas['kontak']?.toString() ?? 'Belum diisi',
                             warnaIsi: biru,
                             tebal: true,
                           ),
@@ -721,98 +817,11 @@ class _PetugasPageState extends State<PetugasPage> {
                             ikon:
                                 Icons.home_repair_service_outlined,
                             label: 'Beban\nPekerjaan:',
-                            isi: petugas['beban'],
+                            isi: petugas['beban']?.toString() ?? 'Belum diisi',
                             tebal: true,
                           ),
                         ],
                       ),
-                    ),
-
-                    const SizedBox(height: 21),
-
-                    Row(
-                      children: [
-                        Expanded(
-                          child: SizedBox(
-                            height: 45,
-                            child: ElevatedButton(
-                              onPressed: () =>
-                                  Navigator.pop(dialogContext),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor:
-                                    const Color(0xFFF0F4F9),
-                                foregroundColor:
-                                    const Color(0xFF354761),
-                                elevation: 0,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius:
-                                      BorderRadius.circular(17),
-                                ),
-                              ),
-                              child: const Text(
-                                'Tutup',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-
-                        const SizedBox(width: 10),
-
-                        Expanded(
-                          child: SizedBox(
-                            height: 45,
-                            child: ElevatedButton(
-                              onPressed: () {
-                                Navigator.pop(dialogContext);
-                                Navigator.pushNamed(
-                                  context,
-                                  '/laporan',
-                                  arguments: petugas,
-                                );
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor:
-                                    const Color(0xFF1749F5),
-                                foregroundColor: Colors.white,
-                                elevation: 3,
-                                padding:
-                                    const EdgeInsets.symmetric(
-                                  horizontal: 5,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius:
-                                      BorderRadius.circular(17),
-                                ),
-                              ),
-                              child: const FittedBox(
-                                fit: BoxFit.scaleDown,
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.center,
-                                  children: [
-                                    Text(
-                                      'Lihat Laporan',
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    SizedBox(width: 4),
-                                    Icon(
-                                      Icons.chevron_right,
-                                      size: 20,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
                     ),
                   ],
                 ),
@@ -868,88 +877,6 @@ class _PetugasPageState extends State<PetugasPage> {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  // NAVIGASI BAWAH
-  Widget _navigasiBawah() {
-    return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(
-          top: BorderSide(
-            color: Color(0xFFE5EAF2),
-            width: 1,
-          ),
-        ),
-      ),
-      child: SafeArea(
-        top: false,
-        child: SizedBox(
-          height: 72,
-          child: Row(
-            children: [
-              _itemNavigasi(
-                icon: Icons.bar_chart_outlined,
-                label: 'Dashboard',
-                aktif: false,
-              ),
-              _itemNavigasi(
-                icon: Icons.description_outlined,
-                label: 'Laporan',
-                aktif: false,
-              ),
-              _itemNavigasi(
-                icon: Icons.people_outline,
-                label: 'Petugas',
-                aktif: true,
-              ),
-              _itemNavigasi(
-                icon: Icons.person_outline,
-                label: 'Profil',
-                aktif: false,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _itemNavigasi({
-    required IconData icon,
-    required String label,
-    required bool aktif,
-  }) {
-    final Color warna =
-        aktif ? biru : const Color(0xFF8DA0BE);
-
-    return Expanded(
-      child: InkWell(
-        onTap: () {
-          // Navigasi halaman lain belum dihubungkan.
-        },
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              icon,
-              size: 23,
-              color: warna,
-            ),
-            const SizedBox(height: 3),
-            Text(
-              label,
-              style: TextStyle(
-                color: warna,
-                fontSize: 12,
-                fontWeight:
-                    aktif ? FontWeight.bold : FontWeight.normal,
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

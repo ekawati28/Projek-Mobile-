@@ -1,4 +1,4 @@
-import '../../services/dashboard_service.dart';
+import '../../services/mahasiswa/dashboard_service.dart';
 import '../../models/dashboard_model.dart';
 import 'package:flutter/material.dart';
 import '../../widgets/bottom_navbar.dart';
@@ -7,7 +7,7 @@ import 'detail_laporan_page.dart';
 import 'profile_page.dart';
 import 'riwayat_laporan_page.dart';
 import 'notifikasi_mahasiswa.dart' hide DetailLaporanPage;
-import '../../services/notifikasi_service.dart';
+import '../../services/mahasiswa/notifikasi_service.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({Key? key}) : super(key: key);

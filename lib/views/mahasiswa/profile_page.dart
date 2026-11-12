@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../../widgets/bottom_navbar.dart';
 import '../../controllers/auth_controller.dart';
-import '../../services/profile_service.dart';
+import '../../services/mahasiswa/profile_service.dart';
 import '../auth/login_page.dart';
 
 class ProfilePage extends StatefulWidget {

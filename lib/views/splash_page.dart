@@ -1,10 +1,12 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'auth/login_page.dart';
-import '../main.dart';
-import 'auth/lupa_password_page3.dart';
-
 import 'package:supabase_flutter/supabase_flutter.dart';
+
+import 'auth/login_page.dart';
+import 'mahasiswa/dashboard_page.dart';
+import 'admin/dashboard_admin.dart';
+import 'admin/petugas_page.dart';
+import '../services/role_service.dart';
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
@@ -18,8 +20,6 @@ class _SplashPageState extends State<SplashPage>
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
   Timer? _timer;
-
-  StreamSubscription<AuthState>? _authSubscription;
 
   @override
   void initState() {
@@ -39,40 +39,94 @@ class _SplashPageState extends State<SplashPage>
 
     _controller.forward();
 
-    _authSubscription = Supabase.instance.client.auth.onAuthStateChange.listen(
-      (data) {
-        if (data.event == AuthChangeEvent.passwordRecovery) {
-          _timer?.cancel();
-
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (_) => const LupaPasswordPage3(),
-            ),
-          );
-        }
-      },
-    );
-
     _timer = Timer(
       const Duration(seconds: 3),
       () {
         if (!mounted) return;
-
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => LoginPage(),
-          ),
-        );
+        _cekSesiDanArahkan();
       },
     );
+  }
+  
+  Future<void> _cekSesiDanArahkan() async {
+    final supabase = Supabase.instance.client;
+    final user = supabase.auth.currentUser;
+
+    // Belum login
+    if (user == null) {
+      if (!mounted) return;
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => LoginPage(),
+        ),
+      );
+      return;
+    }
+
+    try {
+      // Ambil role pengguna dari Supabase
+      final role = await RoleService().getUserRole(user.id);
+
+      if (!mounted) return;
+
+      Widget halamanTujuan;
+
+      switch (role) {
+        case 'admin':
+          halamanTujuan = const DashboardAdminScreen();
+          break;
+
+        case 'mahasiswa':
+          halamanTujuan = const DashboardPage();
+          break;
+
+        case 'petugas':
+          halamanTujuan = PetugasPage();
+          break;
+
+        default:
+          await supabase.auth.signOut();
+
+          if (!mounted) return;
+
+          halamanTujuan = LoginPage();
+      }
+
+      if (!mounted) return;
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => halamanTujuan,
+        ),
+      );
+    } catch (e) {
+      debugPrint('Gagal mengambil role: $e');
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Gagal memeriksa akun. Periksa koneksi internet.',
+          ),
+        ),
+      );
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => LoginPage(),
+        ),
+      );
+    }
   }
 
   @override
   void dispose() {
     _timer?.cancel();
-    _authSubscription?.cancel();
     _controller.dispose();
     super.dispose();
   }

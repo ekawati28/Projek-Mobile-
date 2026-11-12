@@ -1,7 +1,7 @@
 
 import '../models/laporan_item_model.dart';
 import '../models/laporan_model.dart';
-import '../services/riwayat_service.dart';
+import '../services/mahasiswa/riwayat_service.dart';
 
 class RiwayatController {
   final RiwayatService riwayatService = RiwayatService();

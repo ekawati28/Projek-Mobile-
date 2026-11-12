@@ -6,6 +6,10 @@ import 'lupa_password_page3.dart';
 import '../../controllers/auth_controller.dart';
 import '../../widgets/custom_dialog.dart';
 import '../mahasiswa/dashboard_page.dart';
+import '../../services/role_service.dart';
+import '../admin/dashboard_admin.dart';
+import '../admin/petugas_page.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 
 class LoginPage extends StatefulWidget {
@@ -24,6 +28,7 @@ class _LoginPageState extends State<LoginPage> {
   bool isLoading = false;
 
   final AuthController authController = AuthController();
+  final RoleService roleService = RoleService();
   
   String? emailError;
   String? passwordError;
@@ -36,12 +41,10 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
+  
   Future<void> login() async {
-    String email =
-        emailController.text.trim();
-
-    String password =
-        passwordController.text;
+    final email = emailController.text.trim();
+    final password = passwordController.text;
 
     bool isValid = true;
 
@@ -49,73 +52,90 @@ class _LoginPageState extends State<LoginPage> {
       emailError = null;
       passwordError = null;
 
-      if(email.isEmpty){
-        emailError =
-            "Email wajib diisi";
+      if (email.isEmpty) {
+        emailError = "Email wajib diisi";
         isValid = false;
       }
 
-      if(password.isEmpty){
-        passwordError =
-            "Password wajib diisi";
+      if (password.isEmpty) {
+        passwordError = "Password wajib diisi";
         isValid = false;
       }
     });
 
-    if(!isValid){
-      return;
-    }
+    if (!isValid) return;
 
     setState(() {
       isLoading = true;
     });
 
     try {
-      final response =
-          await authController.login(
+      final response = await authController.login(
         email: email,
         password: password,
       );
 
-      if (response.user != null) {
-        if (!mounted) return;
-
-        setState(() {
-          isLoading = false;
-        });
-
-        debugPrint('Login berhasil');
-
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => const DashboardPage(),
-          ),
-        );
+      if (response.user == null) {
+        throw Exception('Pengguna tidak ditemukan');
       }
 
+      final role = await roleService.getUserRole(
+        response.user!.id,
+      );
+
+      if (!mounted) return;
+
+      Widget halamanTujuan;
+
+      switch (role) {
+        case 'admin':
+          halamanTujuan = const DashboardAdminScreen();
+          break;
+
+        case 'mahasiswa':
+          halamanTujuan = const DashboardPage();
+          break;
+
+        case 'petugas':
+          halamanTujuan = const PetugasPage();
+          break;
+
+        default:
+          await Supabase.instance.client.auth.signOut();
+
+          throw Exception(
+            'Role pengguna tidak dikenali atau belum terdaftar',
+          );
+      }
+
+      setState(() {
+        isLoading = false;
+      });
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => halamanTujuan,
+        ),
+      );
     } catch (e) {
+      if (!mounted) return;
+
       setState(() {
         isLoading = false;
       });
 
       String message = "Login gagal";
-      if (e.toString().contains(
-          "Invalid login credentials")) {
-        message =
-            "Email atau password tidak sesuai";
+
+      if (e.toString().contains('Invalid login credentials')) {
+        message = "Email atau password tidak sesuai";
+      } else if (e.toString().contains('Email not confirmed')) {
+        message = "Email belum dikonfirmasi";
+      } else if (e.toString().contains('Role pengguna')) {
+        message = e.toString().replaceFirst('Exception: ', '');
       }
 
-      if (e.toString().contains(
-          "Email not confirmed")) {
-        message =
-            "Email belum dikonfirmasi";
-      }
-
-      showErrorDialog(
-        context,
-        message,
-      );
+      showErrorDialog(context, message);
     }
   }
 

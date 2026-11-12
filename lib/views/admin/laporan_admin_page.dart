@@ -1,4 +1,10 @@
 import 'package:flutter/material.dart';
+import '../../services/admin/admin_laporan_service.dart';
+import 'detail_laporan_admin_page.dart';
+import '../../widgets/bottom_navbar_admin.dart';
+import 'dashboard_admin.dart';
+import 'petugas_page.dart';
+import 'profil_administrator.dart';
 
 class LaporanAdminPage extends StatefulWidget {
   const LaporanAdminPage({super.key});
@@ -11,80 +17,104 @@ class _LaporanAdminPageState extends State<LaporanAdminPage> {
   // Index filter: 0 = Semua, 1 = Diajukan, 2 = Diverifikasi
   int _selectedFilterIndex = 0;
   final TextEditingController _searchController = TextEditingController();
+  final AdminLaporanService _laporanService = AdminLaporanService();
 
-  // Data Dummy Laporan
-  final List<Map<String, dynamic>> _allLaporan = [
-    {
-      'id': '#CR-2026-0041',
-      'title': 'AC di LAP RPL Bermasalah',
-      'status': 'Diajukan',
-      'statusColor': const Color(0xFFFEF3C7),
-      'statusTextColor': const Color(0xFFD97706),
-      'kategori': 'AC',
-      'lokasi': 'LAP RPL',
-      'pelapor': 'Budi Santoso',
-      'tanggal': '19 Sep 2026',
-    },
-    {
-      'id': '#CR-2026-0040',
-      'title': 'Stopkontak Korslet di LAP JAK',
-      'status': 'Diajukan',
-      'statusColor': const Color(0xFFFEF3C7),
-      'statusTextColor': const Color(0xFFD97706),
-      'kategori': 'Listrik',
-      'lokasi': 'LAP JAK',
-      'pelapor': 'Sarah Alkatiri',
-      'tanggal': '19 Sep 2026',
-    },
-    {
-      'id': '#CR-2026-0892',
-      'title': 'Lampu JT3 Mati',
-      'status': 'Diverifikasi',
-      'statusColor': const Color(0xFFDBEAFE),
-      'statusTextColor': const Color(0xFF2563EB),
-      'kategori': 'Listrik',
-      'lokasi': 'JT3',
-      'pelapor': 'Nurul Hidayah',
-      'tanggal': '18 Sep 2026',
-    },
-    {
-      'id': '#CR-2026-0883',
-      'title': 'Kursi ruang kelas rusak',
-      'status': 'Diproses',
-      'statusColor': const Color(0xFFF3E8FF),
-      'statusTextColor': const Color(0xFF9333EA),
-      'kategori': 'Perabot',
-      'lokasi': 'J13',
-      'pelapor': 'Budi Santoso',
-      'tanggal': '18 Sep 2026',
-    },
-    {
-      'id': '#CR-2026-0814',
-      'title': 'Lampu kamar mandi mati',
-      'status': 'Selesai',
-      'statusColor': const Color(0xFFDCFCE7),
-      'statusTextColor': const Color(0xFF16A34A),
-      'kategori': 'Fasilitas',
-      'lokasi': 'Gedung A',
-      'pelapor': 'Ahmad Fausi',
-      'tanggal': '17 Sep 2026',
-    },
-  ];
+  List<Map<String, dynamic>> _allLaporan = [];
+
+  bool _isLoading = true;
+  String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _muatLaporan();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _navigasiAdmin(int index) {
+    if (index == 1) return;
+
+    Widget halaman;
+
+    switch (index) {
+      case 0:
+        halaman = const DashboardAdminScreen();
+        break;
+      case 2:
+        halaman = const PetugasPage();
+        break;
+      case 3:
+        halaman = const ProfilAdministrator();
+        break;
+      default:
+        return;
+    }
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) => halaman,
+      ),
+    );
+  }
+
+  Future<void> _muatLaporan() async {
+    try {
+      final hasil = await _laporanService.getDaftarLaporan();
+
+      if (!mounted) return;
+
+      setState(() {
+        _allLaporan = hasil;
+        _isLoading = false;
+        _errorMessage = null;
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _isLoading = false;
+        _errorMessage = e.toString();
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     // Memfilter data berdasarkan tab yang dipilih
-    List<Map<String, dynamic>> filteredLaporan = _allLaporan.where((item) {
-      if (_selectedFilterIndex == 1) return item['status'] == 'Diajukan';
-      if (_selectedFilterIndex == 2) return item['status'] == 'Diverifikasi';
-      return true; // Index 0 = Semua
-    }).where((item) {
-      // Filter pencarian
-      final query = _searchController.text.toLowerCase();
-      return item['title'].toString().toLowerCase().contains(query) ||
-          item['id'].toString().toLowerCase().contains(query) ||
-          item['lokasi'].toString().toLowerCase().contains(query);
-    }).toList();
+    List<Map<String, dynamic>> filteredLaporan =
+      _allLaporan.where((item) {
+    final status = item['status']?.toString() ?? '';
+
+    if (_selectedFilterIndex == 1) {
+      return status == 'Diajukan';
+    }
+
+    if (_selectedFilterIndex == 2) {
+      return status == 'Diverifikasi';
+    }
+
+    if (_selectedFilterIndex == 3) {
+      return status == 'Diproses';
+    }
+
+    if (_selectedFilterIndex == 4) {
+      return status == 'Selesai';
+    }
+
+    return true;
+  }).where((item) {
+    final query = _searchController.text.toLowerCase();
+
+    return item['title'].toString().toLowerCase().contains(query) ||
+        item['id'].toString().toLowerCase().contains(query) ||
+        item['lokasi'].toString().toLowerCase().contains(query);
+  }).toList();
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
@@ -96,23 +126,18 @@ class _LaporanAdminPageState extends State<LaporanAdminPage> {
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
               child: Row(
                 children: [
-                  IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.arrow_back, color: Colors.black87),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                  ),
-                  const SizedBox(width: 16),
-                  Column(
+                  const Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
+                    children: [
                       Text(
-                        'Daftar Laporan\nKampus',
-                        style: TextStyle(
-                          fontSize: 18,
+                        'Daftar Laporan Kampus',
+                        maxLines: 1,
+                        softWrap: false,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 20,
                           fontWeight: FontWeight.bold,
                           color: Colors.black87,
-                          height: 1.2,
                         ),
                       ),
                       SizedBox(height: 2),
@@ -121,35 +146,6 @@ class _LaporanAdminPageState extends State<LaporanAdminPage> {
                         style: TextStyle(
                           fontSize: 11,
                           color: Color(0xFF64748B),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const Spacer(),
-                  Stack(
-                    children: [
-                      IconButton(
-                        onPressed: () {},
-                        icon: const Icon(Icons.notifications_none_outlined,
-                            color: Colors.black87),
-                      ),
-                      Positioned(
-                        right: 8,
-                        top: 8,
-                        child: Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: const BoxDecoration(
-                            color: Color(0xFFEF4444),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Text(
-                            '3',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 9,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
                         ),
                       ),
                     ],
@@ -194,11 +190,15 @@ class _LaporanAdminPageState extends State<LaporanAdminPage> {
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Row(
                 children: [
-                  _buildFilterChip(0, 'Semua (6)'),
+                  _buildFilterChip(0, 'Semua'),
                   const SizedBox(width: 8),
-                  _buildFilterChip(1, 'Diajukan (2)'),
+                  _buildFilterChip(1, 'Diajukan'),
                   const SizedBox(width: 8),
                   _buildFilterChip(2, 'Diverifikasi'),
+                  const SizedBox(width: 8),
+                  _buildFilterChip(3, 'Diproses'),
+                  const SizedBox(width: 8),
+                  _buildFilterChip(4, 'Selesai'),
                 ],
               ),
             ),
@@ -206,47 +206,40 @@ class _LaporanAdminPageState extends State<LaporanAdminPage> {
 
             // === LIST LAPORAN ===
             Expanded(
-              child: ListView.separated(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                itemCount: filteredLaporan.length,
-                separatorBuilder: (context, index) =>
-                    const SizedBox(height: 12),
-                itemBuilder: (context, index) {
-                  final item = filteredLaporan[index];
-                  return _buildLaporanCard(item);
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
+              child: _isLoading
+                ? const Center(
+                    child: CircularProgressIndicator(),
+                  )
+                : _errorMessage != null
+                    ? Center(
+                        child: Text(
+                          'Gagal memuat laporan:\n$_errorMessage',
+                          textAlign: TextAlign.center,
+                        ),
+                      )
+                    : filteredLaporan.isEmpty
+                        ? const Center(
+                            child: Text('Tidak ada laporan ditemukan.'),
+                          )
+                        : ListView.separated(
+                            padding: const EdgeInsets.symmetric(horizontal: 20),
+                            itemCount: filteredLaporan.length,
+                            separatorBuilder: (context, index) =>
+                                const SizedBox(height: 12),
+                            itemBuilder: (context, index) {
+                              final item = filteredLaporan[index];
+                              return _buildLaporanCard(item);
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
 
       // === NAVIGATION BAR BAWAH ===
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: 1, // Menu Laporan Aktif
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: const Color(0xFF2563EB),
-        unselectedItemColor: const Color(0xFF94A3B8),
-        selectedFontSize: 11,
-        unselectedFontSize: 11,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.bar_chart_outlined),
-            label: 'Dashboard',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.assignment_outlined),
-            label: 'Laporan',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.people_alt_outlined),
-            label: 'Petugas',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline),
-            label: 'Profil',
-          ),
-        ],
+      bottomNavigationBar: BottomNavbarAdmin(
+        currentIndex: 1,
+        onTap: _navigasiAdmin,
       ),
     );
   }
@@ -281,106 +274,206 @@ class _LaporanAdminPageState extends State<LaporanAdminPage> {
 
   // Helper Kartu Item Laporan
   Widget _buildLaporanCard(Map<String, dynamic> item) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Row Header Kartu (ID Tiket & Badge Status)
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                item['id'],
-                style: const TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF2563EB),
-                ),
-              ),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: item['statusColor'],
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  item['status'],
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: item['statusTextColor'],
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
+    final status = item['status']?.toString() ?? '';
 
-          // Judul Laporan
-          Text(
-            item['title'],
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
+    final statusColor = switch (status) {
+      'Diajukan' => const Color(0xFFFEF3C7),
+      'Diverifikasi' => const Color(0xFFDBEAFE),
+      'Diproses' => const Color(0xFFF3E8FF),
+      'Selesai' => const Color(0xFFDCFCE7),
+      _ => const Color(0xFFE2E8F0),
+    };
+
+    final statusTextColor = switch (status) {
+      'Diajukan' => const Color(0xFFD97706),
+      'Diverifikasi' => const Color(0xFF2563EB),
+      'Diproses' => const Color(0xFF9333EA),
+      'Selesai' => const Color(0xFF16A34A),
+      _ => const Color(0xFF64748B),
+    };
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(16),
+      onTap: () async {
+        final berubah = await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => DetailLaporanAdminPage(
+              laporan: item,
             ),
           ),
-          const SizedBox(height: 12),
+        );
 
-          // Details: Kategori & Lokasi
-          Row(
-            children: [
-              const Icon(Icons.sell_outlined,
-                  size: 14, color: Color(0xFF94A3B8)),
-              const SizedBox(width: 4),
-              Text(
-                item['kategori'],
-                style: const TextStyle(
-                    fontSize: 11, color: Color(0xFF64748B)),
-              ),
-              const SizedBox(width: 20),
-              const Icon(Icons.location_on_outlined,
-                  size: 14, color: Color(0xFFEF4444)),
-              const SizedBox(width: 4),
-              Text(
-                item['lokasi'],
-                style: const TextStyle(
-                    fontSize: 11, color: Color(0xFF64748B)),
-              ),
-            ],
+        if (berubah == true) {
+          await _muatLaporan();
+        }
+      },
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: const Color(0xFFE2E8F0),
           ),
-          const SizedBox(height: 6),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  item['id']?.toString() ?? '-',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF2563EB),
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: statusColor,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    status,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: statusTextColor,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              item['title']?.toString() ?? '-',
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 12),
+            
+            // BARIS INFORMASI KATEGORI DAN LOKASI
+            Row(
+              children: [
+                Expanded(
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.sell_outlined,
+                        size: 14,
+                        color: Color(0xFF94A3B8),
+                      ),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          item['kategori']?.toString() ?? '-',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: Color(0xFF64748B),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
 
-          // Details: Pelapor & Tanggal
-          Row(
-            children: [
-              const Icon(Icons.person_outline,
-                  size: 14, color: Color(0xFF94A3B8)),
-              const SizedBox(width: 4),
-              Text(
-                item['pelapor'],
-                style: const TextStyle(
-                    fontSize: 11, color: Color(0xFF64748B)),
-              ),
-              const SizedBox(width: 20),
-              const Icon(Icons.calendar_today_outlined,
-                  size: 14, color: Color(0xFF94A3B8)),
-              const SizedBox(width: 4),
-              Text(
-                item['tanggal'],
-                style: const TextStyle(
-                    fontSize: 11, color: Color(0xFF64748B)),
-              ),
-            ],
-          ),
-        ],
+                const SizedBox(width: 8),
+
+                Expanded(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      const Icon(
+                        Icons.location_on_outlined,
+                        size: 14,
+                        color: Color(0xFFEF4444),
+                      ),
+                      const SizedBox(width: 4),
+                      Flexible(
+                        child: Text(
+                          item['lokasi']?.toString() ?? '-',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.right,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: Color(0xFF64748B),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 6),
+
+            // BARIS INFORMASI PELAPOR DAN TANGGAL
+            Row(
+              children: [
+                Expanded(
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.person_outline,
+                        size: 14,
+                        color: Color(0xFF94A3B8),
+                      ),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          item['pelapor']?.toString() ?? '-',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: Color(0xFF64748B),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(width: 8),
+
+                Expanded(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      const Icon(
+                        Icons.calendar_today_outlined,
+                        size: 14,
+                        color: Color(0xFF94A3B8),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        item['tanggal']?.toString() ?? '-',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: Color(0xFF64748B),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

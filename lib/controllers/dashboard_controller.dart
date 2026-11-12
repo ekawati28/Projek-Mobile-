@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/dashboard_model.dart';
-import '../services/dashboard_service.dart';
+import '../services/mahasiswa/dashboard_service.dart';
 
 class DashboardController extends ChangeNotifier {
 
